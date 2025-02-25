@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Database Cost Comparator</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans&family=Barlow+Condensed:wght@100&family=Chivo+Mono&family=Luckiest+Guy&family=Oswald:wght@200&family=Permanent+Marker&family=Poppins:wght@400;600&family=Sevillana&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins';
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        h1,
+        h2 {
+            color: #333;
+            text-align: center;
+            margin: 0;
+            padding: 1px 0;
+        }
+
+        table {
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 20px;
+            margin-left: auto;
+            margin-right: auto;
+            box-sizing: border-box;
+            border-collapse: collapse;
+        }
+
+        .cell {
+            padding: 2px;
+            vertical-align: middle;
+            border: 1px solid #ccc;
+        }
+
+        .bar-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            width: 100%;
+        }
+
+        .bar-container {
+            display: flex;
+            flex-direction: row; 
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .cost-breakdown {
+            flex-grow: 1;
+            padding-left: 10px;
+            text-align: left;
+            white-space: pre-wrap;
+            vertical-align: top;
+            font-size: 12px; 
+        }
+
+        .bar-label {
+            width: 100%;
+            text-align: center;
+            color: #555;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .bar-value {
+            font-weight: bold;
+            color: #333;
+            font-size: 15px;
+        }
+
+        .bar {
+            width: 30px;
+            height: 400px;
+            background-color: #ddd;
+            margin-right: 10px;
+            transform: rotate(180deg);
+        }
+
+        .filled-bar {
+            height: 0;
+            background-color: #3498db;
+            transition: height 0.3s;
+            transform: rotate(180deg);
+        }
+
+        input[type="range"],
+        input[type="text"] {
+            width: 90%;
+            margin: 5px 0;
+        }
+
+        select {
+            width: 90%;
+            padding: 5px;
+            margin: 5px 0;
+        }
+
+        .cellmainoption {
+            padding: 10px;
+            vertical-align: middle;
+            border: 1px solid #ccc;
+            text-align: right;
+        }
+
+        .selectmainoption {
+            padding: 2px;
+            margin: 2px;
+            width: auto;
+        }
+
+        .cell>select {
+            display: inline-block;
+            margin-right: 20px;
+        }
+
+        .cell label {
+            margin-right: 10px;
+        }
+
+        .cell>select:last-child {
+            margin-right: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <table>
+        <!-- Header -->
+        <tr>
+            <td colspan="3" class="cell">
+                <h2>Database Cost Comparator: Aurora vs CockroachDB vs Spanner</h2>
+            </td>
+        </tr>
+
+        <!-- Region & Comparison -->
+        <tr>
+            <td colspan="3" class="cellmainoption">
+                <label for="region-select">Region:</label>
+                <select id="region-select" class="selectmainoption">
+                    <option value="us-east-1">US East (N. Virginia)</option>
+                    <option value="us-west-1">US West (N. California)</option>
+                    <option value="eu-west-1">EU (Ireland)</option>
+                    <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                    <!-- Add more regions as needed -->
+                </select> 
+                <label for="comparison-select">Comparison:</label>
+                <select id="comparison-select" class="selectmainoption">
+                    <option value="automatic">Automatic</option>
+                    <option value="manual">Manual</option>
+                </select>
+            </td>
+        </tr>
+
+        <!-- 3-column row: Aurora, CockroachDB, Spanner inputs -->
+        <tr>
+            <!-- Aurora Input Cell -->
+            <td class="cell">
+                <h3>Aurora</h3>
+                <label for="aurora-instance-type">Instance Type:</label>
+                <select id="aurora-instance-type">
+                    <option value="db.x2g.large" data-standard="0.377" data-optimized="0.49"
+                        ec2-selfmanagedprice="" data-memory="32" data-cpu="2">
+                        db.x2g.large
+                    </option>
+                    <option value="db.x2g.xlarge" data-standard="0.754" data-optimized="0.98"
+                        ec2-selfmanagedprice="" data-memory="64" data-cpu="4">
+                        db.x2g.xlarge
+                    </option>
+                    <option value="db.x2g.2xlarge" data-standard="1.508" data-optimized="1.96"
+                        ec2-selfmanagedprice="" data-memory="128" data-cpu="8">
+                        db.x2g.2xlarge
+                    </option>
+                    <option value="db.x2g.4xlarge" data-standard="3.016" data-optimized="3.921"
+                        ec2-selfmanagedprice="" data-memory="256" data-cpu="16">
+                        db.x2g.4xlarge
+                    </option>
+                    <option value="db.x2g.8xlarge" data-standard="6.032" data-optimized="7.842"
+                        ec2-selfmanagedprice="" data-memory="512" data-cpu="32">
+                        db.x2g.8xlarge
+                    </option>
+                    <option value="db.x2g.12xlarge" data-standard="9.048" data-optimized="11.762"
+                        ec2-selfmanagedprice="" data-memory="768" data-cpu="48">
+                        db.x2g.12xlarge
+                    </option>
+                    <option value="db.x2g.16xlarge" data-standard="12.064" data-optimized="15.683"
+                        ec2-selfmanagedprice="" data-memory="1024" data-cpu="64">
+                        db.x2g.16xlarge
+                    </option>
+                    <option value="db.r7g.large" data-standard="0.276" data-optimized="0.359"
+                        ec2-selfmanagedprice="" data-memory="16" data-cpu="2">
+                        db.r7g.large
+                    </option>
+                    <option value="db.r7g.xlarge" data-standard="0.553" data-optimized="0.719"
+                        ec2-selfmanagedprice="" data-memory="32" data-cpu="4">
+                        db.r7g.xlarge
+                    </option>
+                    <option value="db.r7g.2xlarge" data-standard="1.106" data-optimized="1.437"
+                        ec2-selfmanagedprice="" data-memory="64" data-cpu="8">
+                        db.r7g.2xlarge
+                    </option>
+                    <option value="db.r7g.4xlarge" data-standard="2.211" data-optimized="2.874"
+                        ec2-selfmanagedprice="" data-memory="128" data-cpu="16">
+                        db.r7g.4xlarge
+                    </option>
+                    <option value="db.r7g.8xlarge" data-standard="4.422" data-optimized="5.749"
+                        ec2-selfmanagedprice="1.7136" data-memory="256" data-cpu="32">
+                        db.r7g.8xlarge
+                    </option>
+                    <option value="db.r7g.12xlarge" data-standard="6.633" data-optimized="8.623"
+                        ec2-selfmanagedprice="" data-memory="384" data-cpu="48">
+                        db.r7g.12xlarge
+                    </option>
+                    <option value="db.r7g.16xlarge" data-standard="8.844" data-optimized="11.497"
+                        ec2-selfmanagedprice="" data-memory="512" data-cpu="64">
+                        db.r7g.16xlarge
+                    </option>
+                    <option value="db.r6g.large" data-standard="0.26" data-optimized="0.338"
+                        ec2-selfmanagedprice="" data-memory="16" data-cpu="2">
+                        db.r6g.large
+                    </option>
+                    <option value="db.r6g.xlarge" data-standard="0.519" data-optimized="0.675"
+                        ec2-selfmanagedprice="" data-memory="32" data-cpu="4">
+                        db.r6g.xlarge
+                    </option>
+                    <option value="db.r6g.2xlarge" data-standard="1.038" data-optimized="1.349"
+                        ec2-selfmanagedprice="" data-memory="64" data-cpu="8">
+                        db.r6g.2xlarge
+                    </option>
+                    <option value="db.r6g.4xlarge" data-standard="2.076" data-optimized="2.699"
+                        ec2-selfmanagedprice="" data-memory="128" data-cpu="16">
+                        db.r6g.4xlarge
+                    </option>
+                    <option value="db.r6g.8xlarge" data-standard="4.153" data-optimized="5.399"
+                        ec2-selfmanagedprice="1.7136" data-memory="256" data-cpu="32">
+                        db.r6g.8xlarge
+                    </option>
+                    <option value="db.r6g.12xlarge" data-standard="6.229" data-optimized="8.098"
+                        ec2-selfmanagedprice="" data-memory="384" data-cpu="48">
+                        db.r6g.12xlarge
+                    </option>
+                    <option value="db.r6g.16xlarge" data-standard="8.306" data-optimized="10.798"
+                        ec2-selfmanagedprice="" data-memory="512" data-cpu="64">
+                        db.r6g.16xlarge
+                    </option>
+                    <option value="db.r6i.large" data-standard="0.29" data-optimized="0.377"
+                        ec2-selfmanagedprice="" data-memory="16" data-cpu="2">
+                        db.r6i.large
+                    </option>
+                    <option value="db.r6i.xlarge" data-standard="0.58" data-optimized="0.754"
+                        ec2-selfmanagedprice="" data-memory="32" data-cpu="4">
+                        db.r6i.xlarge
+                    </option>
+                    <option value="db.r6i.2xlarge" data-standard="1.16" data-optimized="1.508"
+                        ec2-selfmanagedprice="" data-memory="64" data-cpu="8">
+                        db.r6i.2xlarge
+                    </option>
+                    <option value="db.r6i.4xlarge" data-standard="2.32" data-optimized="3.016"
+                        ec2-selfmanagedprice="" data-memory="128" data-cpu="16">
+                        db.r6i.4xlarge
+                    </option>
+                    <option value="db.r6i.8xlarge" data-standard="4.64" data-optimized="6.032"
+                        ec2-selfmanagedprice="2.016" data-memory="256" data-cpu="32">
+                        db.r6i.8xlarge
+                    </option>
+                    <option value="db.r6i.12xlarge" data-standard="6.96" data-optimized="9.048"
+                        ec2-selfmanagedprice="" data-memory="384" data-cpu="48">
+                        db.r6i.12xlarge
+                    </option>
+                    <option value="db.r6i.16xlarge" data-standard="9.28" data-optimized="12.064"
+                        ec2-selfmanagedprice="" data-memory="512" data-cpu="64">
+                        db.r6i.16xlarge
+                    </option>
+                    <option value="db.r6i.24xlarge" data-standard="13.92" data-optimized="18.096"
+                        ec2-selfmanagedprice="" data-memory="768" data-cpu="96">
+                        db.r6i.24xlarge
+                    </option>
+                    <option value="db.r6i.32xlarge" data-standard="18.56" data-optimized="24.128"
+                        ec2-selfmanagedprice="" data-memory="1024" data-cpu="128">
+                        db.r6i.32xlarge
+                    </option>
+                    <option value="db.r5.large" data-standard="0.29" data-optimized="0.377"
+                        ec2-selfmanagedprice="0.126" data-memory="16" data-cpu="2" selected>
+                        db.r5.large
+                    </option>
+                    <option value="db.r5.xlarge" data-standard="0.58" data-optimized="0.754"
+                        ec2-selfmanagedprice="0.252" data-memory="32" data-cpu="4">
+                        db.r5.xlarge
+                    </option>
+                    <option value="db.r5.2xlarge" data-standard="1.16" data-optimized="1.508"
+                        ec2-selfmanagedprice="0.504" data-memory="64" data-cpu="8">
+                        db.r5.2xlarge
+                    </option>
+                    <option value="db.r5.4xlarge" data-standard="2.32" data-optimized="3.016"
+                        ec2-selfmanagedprice="1.008" data-memory="128" data-cpu="16">
+                        db.r5.4xlarge
+                    </option>
+                    <option value="db.r5.8xlarge" data-standard="4.64" data-optimized="6.032"
+                        ec2-selfmanagedprice="2.016" data-memory="256" data-cpu="32">
+                        db.r5.8xlarge
+                    </option>
+                    <option value="db.r5.12xlarge" data-standard="6.96" data-optimized="9.048"
+                        ec2-selfmanagedprice="3.024" data-memory="384" data-cpu="48">
+                        db.r5.12xlarge
+                    </option>
+                    <option value="db.r5.16xlarge" data-standard="9.28" data-optimized="12.064"
+                        ec2-selfmanagedprice="4.032" data-memory="512" data-cpu="64">
+                        db.r5.16xlarge
+                    </option>
+                    <option value="db.r5.24xlarge" data-standard="13.92" data-optimized="18.096"
+                        ec2-selfmanagedprice="6.048" data-memory="768" data-cpu="96">
+                        db.r5.24xlarge
+                    </option>
+                </select>
+                <br>
+                <span id="aurora-memory">Memory: 16 GiB</span> 
+                <span id="aurora-vcpu">VCPU: 2</span>
+                <br><br>
+                <label for="aurora-storage">Storage Size (GB):</label>
+                <input type="text" id="aurora-storage" value="1">
+                <br>
+                <label for="aurora-io">I/O Requests (per million):</label>
+                <input type="text" id="aurora-io" value="1">
+            </td>
+
+            <!-- CockroachDB Input Cell -->
+            <td class="cell">
+                <h3>CockroachDB</h3>
+                <label for="cockroachdb-nodes">Number of Nodes:</label>
+                <input type="range" id="cockroachdb-nodes" min="1" max="10" value="1">
+                <span id="node-count">1</span>
+                <br>
+                <label for="cockroachdb-instance-type">Instance Type:</label>
+                <select id="cockroachdb-instance-type">
+                    <option value="standard-2vcpu" data-price="0.455">2 vCPUs (Standard)</option>
+                    <option value="standard-4vcpu" data-price="0.81">4 vCPUs (Standard)</option>
+                    <option value="standard-8vcpu" data-price="1.439">8 vCPUs (Standard)</option>
+                    <option value="standard-16vcpu" data-price="2.797">16 vCPUs (Standard)</option>
+                    <option value="standard-32vcpu" data-price="5.297">32 vCPUs (Standard)</option>
+                    <option value="advanced-2vcpu" data-price="0.523">2 vCPUs (Advanced)</option>
+                    <option value="advanced-4vcpu" data-price="0.931">4 vCPUs (Advanced)</option>
+                    <option value="advanced-8vcpu" data-price="1.655">8 vCPUs (Advanced)</option>
+                    <option value="advanced-16vcpu" data-price="3.217">16 vCPUs (Advanced)</option>
+                    <option value="advanced-32vcpu" data-price="6.091">32 vCPUs (Advanced)</option>
+                </select>
+                <br>
+                <label for="cockroachdb-storage">Storage Size (GB):</label>
+                <input type="text" id="cockroachdb-storage" value="1">
+                <br>
+                <label for="cockroachdb-io">I/O Requests (per million):</label>
+                <input type="text" id="cockroachdb-io" value="1">
+            </td>
+
+            <!-- Spanner Input Cell -->
+            <td class="cell">
+                <h3>Spanner</h3>
+                <label for="spanner-nodes">Number of Nodes:</label>
+                <input type="range" id="spanner-nodes" min="1" max="10" value="1">
+                <span id="spanner-node-count">1</span>
+                <br>
+                <label for="spanner-storage">Storage Size (GB):</label>
+                <input type="text" id="spanner-storage" value="1">
+                <br>
+                <!-- Instead of I/O, we have Backup Storage -->
+                <label for="spanner-backup">Backup Storage (GB):</label>
+                <input type="text" id="spanner-backup" value="0">
+            </td>
+        </tr>
+
+        <!-- Row for the bars: Aurora, Cockroach, Spanner -->
+        <tr>
+            <!-- Aurora Bars -->
+            <td class="cell">
+                <div class="bar-group">
+                    <div class="bar-container">
+                        <div class="bar">
+                            <div id="aurora-bar" class="filled-bar"></div>
+                        </div>
+                        <div class="cost-breakdown">
+                            <span id="aurora-cost" class="bar-value">$0.00</span>
+                            <span id="aurora-breakdown"></span>
+                        </div>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar">
+                            <div id="aurora-optimized-bar" class="filled-bar"></div>
+                        </div>
+                        <div class="cost-breakdown">
+                            <span id="aurora-optimized-cost" class="bar-value">$0.00</span>
+                            <span id="aurora-optimized-breakdown"></span>
+                        </div>
+                    </div>
+                </div>
+            </td>
+
+            <!-- Cockroach Bars -->
+            <td class="cell">
+                <div class="bar-group">
+                    <div class="bar-container">
+                        <div class="bar">
+                            <div id="cockroachdb-bar" class="filled-bar"></div>
+                        </div>
+                        <div class="cost-breakdown">
+                            <span id="cockroachdb-cost" class="bar-value">$0.00</span>
+                            <span id="cockroachdb-breakdown"></span>
+                        </div>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar">
+                            <div id="self-managed-bar" class="filled-bar"></div>
+                        </div>
+                        <div class="cost-breakdown">
+                            <span id="self-managed-cost" class="bar-value">$0.00</span>
+                            <span id="self-managed-breakdown"></span>
+                        </div>
+                    </div>
+                </div>
+            </td>
+
+            <!-- Spanner Bars (Standard vs. Enterprise) -->
+            <td class="cell">
+                <div class="bar-group">
+                    <div class="bar-container">
+                        <div class="bar">
+                            <div id="spanner-standard-bar" class="filled-bar"></div>
+                        </div>
+                        <div class="cost-breakdown">
+                            <span id="spanner-standard-cost" class="bar-value">$0.00</span>
+                            <span id="spanner-standard-breakdown"></span>
+                        </div>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar">
+                            <div id="spanner-enterprise-bar" class="filled-bar"></div>
+                        </div>
+                        <div class="cost-breakdown">
+                            <span id="spanner-enterprise-cost" class="bar-value">$0.00</span>
+                            <span id="spanner-enterprise-breakdown"></span>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <script>
+        function updateCost() {
+            // ==================== AURORA INPUTS ====================
+            const auroraInstanceType = document.getElementById("aurora-instance-type");
+            const auroraStorage = parseFloat(document.getElementById("aurora-storage").value) || 0;
+            const auroraIO = parseFloat(document.getElementById("aurora-io").value) || 0;
+
+            const auroraStandardPrice = parseFloat(auroraInstanceType.options[auroraInstanceType.selectedIndex].getAttribute("data-standard")) || 0;
+            const auroraOptimizedPrice = parseFloat(auroraInstanceType.options[auroraInstanceType.selectedIndex].getAttribute("data-optimized")) || 0;
+            const selfmanagedPrice = parseFloat(auroraInstanceType.options[auroraInstanceType.selectedIndex].getAttribute("ec2-selfmanagedprice")) || 0;
+
+            const auroraMemory = auroraInstanceType.options[auroraInstanceType.selectedIndex].getAttribute("data-memory");
+            document.getElementById("aurora-memory").textContent = `Memory: ${auroraMemory} GiB`;
+
+            const auroraVcpu = auroraInstanceType.options[auroraInstanceType.selectedIndex].getAttribute("data-cpu");
+            document.getElementById("aurora-vcpu").textContent = `VCPU: ${auroraVcpu}`;
+
+            // Example Aurora pricing
+            // Standard (Provisioned):
+            const auroraStorageCost = auroraStorage * 0.10;  // $0.10/GB-month
+            const auroraIOCost = auroraIO * 0.20;            // $0.20 per million requests
+            const auroraCostStandard = (auroraStandardPrice * 730) + auroraStorageCost + auroraIOCost;
+
+            // I/O Optimized:
+            const aurorastoragecostioo = auroraStorage * 0.225; // $0.225/GB-month under IO-Optimized
+            const auroraCostOptimized = (auroraOptimizedPrice * 730) + aurorastoragecostioo;
+
+            // ==================== COCKROACHDB INPUTS ====================
+            const cockroachdbInstanceType = document.getElementById("cockroachdb-instance-type");
+            const cockroachdbStorage = parseFloat(document.getElementById("cockroachdb-storage").value) || 0;
+            const cockroachdbIO = parseFloat(document.getElementById("cockroachdb-io").value) || 0;
+            const cockroachdbNodes = parseInt(document.getElementById("cockroachdb-nodes").value) || 1;
+
+            document.getElementById("node-count").textContent = cockroachdbNodes;
+
+            const cockroachdbPrice = parseFloat(cockroachdbInstanceType.options[cockroachdbInstanceType.selectedIndex].getAttribute("data-price")) || 0;
+
+            // Example rates
+            const cockroachdbStorageCost = cockroachdbStorage * 0.00045792 * 730;
+            const cockroachdbIOCost = cockroachdbIO * 0.00001956947162 * 730;
+
+            let cockroachdbCost = 0; 
+            let selfmanagedinstanceprice = 0; 
+
+            // ==================== DETERMINE MODE (Manual vs. Automatic) ====================
+            const mode = document.getElementById("comparison-select").value;
+
+            if (mode === "manual") {
+                // MANUAL: user picks Cockroach settings
+                document.getElementById("cockroachdb-storage").disabled = false;
+                document.getElementById("cockroachdb-io").disabled = false;
+                document.getElementById("cockroachdb-nodes").disabled = false;
+                document.getElementById("cockroachdb-instance-type").disabled = false;
+
+                cockroachdbCost = (cockroachdbPrice * 730 * cockroachdbNodes) + cockroachdbStorageCost + cockroachdbIOCost;
+                selfmanagedinstanceprice = (selfmanagedPrice * 730 * cockroachdbNodes) + auroraStorageCost; 
+            } else {
+                // AUTOMATIC: match Aurora's CPU => pick best Cockroach instance + typical 3 nodes
+                document.getElementById("cockroachdb-storage").disabled = true;
+                document.getElementById("cockroachdb-io").disabled = true;
+                document.getElementById("cockroachdb-nodes").disabled = true;
+                document.getElementById("cockroachdb-instance-type").disabled = true;
+
+                let selectedCockroachdbOption = null;
+                const cockroachdbOptions = cockroachdbInstanceType.options;
+                for (let i = 0; i < cockroachdbOptions.length; i++) {
+                    const matchVcpu = cockroachdbOptions[i].text.match(/(\d+)\s*vCPUs/);
+                    if (matchVcpu) {
+                        const cockroachdbVcpu = parseInt(matchVcpu[1]);
+                        if (cockroachdbVcpu === parseInt(auroraVcpu)) {
+                            selectedCockroachdbOption = cockroachdbOptions[i];
+                            document.getElementById("cockroachdb-nodes").value = 3;
+                            document.getElementById("node-count").textContent = 3;
+                            break;
+                        }
+                    }
+                }
+                if (!selectedCockroachdbOption) {
+                    // fallback to 8 vCPUs
+                    for (let i = 0; i < cockroachdbOptions.length; i++) {
+                        const cockroachdbVcpuMatch = cockroachdbOptions[i].text.match(/(\d+)\s*vCPUs/);
+                        if (cockroachdbVcpuMatch && parseInt(cockroachdbVcpuMatch[1]) === 8) {
+                            selectedCockroachdbOption = cockroachdbOptions[i];
+                            break;
+                        }
+                    }
+                    // scale the cluster node count
+                    const fallbackNodes = Math.ceil(auroraVcpu / 8);
+                    document.getElementById("cockroachdb-nodes").value = fallbackNodes;
+                    document.getElementById("node-count").textContent = fallbackNodes;
+                }
+                if (selectedCockroachdbOption) {
+                    document.getElementById("cockroachdb-instance-type").value = selectedCockroachdbOption.value;
+                }
+
+                // Typically 3x replication => storage ~ 3x
+                const autoCockroachdbStorage = auroraStorage * 3;
+                document.getElementById("cockroachdb-storage").value = autoCockroachdbStorage;
+                document.getElementById("cockroachdb-io").value = auroraIO;
+
+                const clusterNodes = parseInt(document.getElementById("cockroachdb-nodes").value) || 3;
+                const autoCockroachdbStorageCost = autoCockroachdbStorage * 0.00045792 * 730;
+                const autoCockroachdbIOCost = auroraIO * 0.00001956947162 * 730;
+
+                cockroachdbCost = (cockroachdbPrice * 730 * clusterNodes) + autoCockroachdbStorageCost + autoCockroachdbIOCost;
+                selfmanagedinstanceprice = (selfmanagedPrice * 730 * clusterNodes) + auroraStorageCost; 
+            }
+
+            // ==================== SPANNER INPUTS ====================
+            const spannerNodes = parseInt(document.getElementById("spanner-nodes").value) || 1;
+            document.getElementById("spanner-node-count").textContent = spannerNodes;
+
+            const spannerStorage = parseFloat(document.getElementById("spanner-storage").value) || 0;
+            const spannerBackup = parseFloat(document.getElementById("spanner-backup").value) || 0;
+
+            // Example Single-Region Pricing
+            // Standard:
+            const spannerStandardRate = 0.90;  // $0.90/node-hour
+            const spannerStorageRate = 0.30;   // $0.30/GB-month
+            const spannerBackupRate = 0.10;    // $0.10/GB-month for backups
+
+            // Enterprise: e.g. includes CDC or advanced features
+            const spannerEnterpriseRate = 1.23; // $1.23/node-hour (example)
+
+            const spannerStandardCompute = spannerNodes * spannerStandardRate * 730;
+            const spannerStandardStorage = spannerStorage * spannerStorageRate;
+            const spannerStandardBackup = spannerBackup * spannerBackupRate;
+            const spannerStandardCost = spannerStandardCompute + spannerStandardStorage + spannerStandardBackup;
+
+            const spannerEnterpriseCompute = spannerNodes * spannerEnterpriseRate * 730;
+            const spannerEnterpriseStorage = spannerStorage * spannerStorageRate;
+            const spannerEnterpriseBackup = spannerBackup * spannerBackupRate;
+            const spannerEnterpriseCost = spannerEnterpriseCompute + spannerEnterpriseStorage + spannerEnterpriseBackup;
+
+
+            // ==================== BREAKDOWN TABLES ====================
+            // Aurora Provisioned
+            document.getElementById("aurora-breakdown").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins';">
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Compute</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${(auroraStandardPrice*730).toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Storage</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${auroraStorageCost.toFixed(2)}</td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">I/O</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${auroraIOCost.toFixed(2)}</td>
+                    </tr>
+                </table>
+            `;
+
+            // Aurora IO-Optimized
+            document.getElementById("aurora-optimized-breakdown").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins';">
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Compute</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${(auroraOptimizedPrice * 730).toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Storage</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${aurorastoragecostioo.toFixed(2)}</td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">I/O</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$0.00</td>
+                    </tr>
+                </table>
+            `;
+
+            // CockroachDB
+            document.getElementById("cockroachdb-breakdown").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins';">
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Node Cost</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${(cockroachdbPrice * 730 * cockroachdbNodes).toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Storage</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${cockroachdbStorageCost.toFixed(2)}</td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">I/O</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${cockroachdbIOCost.toFixed(2)}</td>
+                    </tr>
+                </table>
+            `;
+
+            // Self-managed
+            document.getElementById("self-managed-breakdown").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins';">
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Instance</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${(selfmanagedPrice * 730 * cockroachdbNodes).toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Storage</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${auroraStorageCost.toFixed(2)}</td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">I/O</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$0.00</td>
+                    </tr>
+                </table>
+            `;
+
+            // Spanner Standard
+            document.getElementById("spanner-standard-breakdown").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins';">
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Compute</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${spannerStandardCompute.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Storage</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${spannerStandardStorage.toFixed(2)}</td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Backup</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${spannerStandardBackup.toFixed(2)}</td>
+                    </tr>
+                </table>
+            `;
+
+            // Spanner Enterprise
+            document.getElementById("spanner-enterprise-breakdown").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins';">
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Compute</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${spannerEnterpriseCompute.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Storage</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${spannerEnterpriseStorage.toFixed(2)}</td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Backup</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px;">$${spannerEnterpriseBackup.toFixed(2)}</td>
+                    </tr>
+                </table>
+            `;
+
+            // ==================== UPDATE BAR DISPLAYS ====================
+            // Aurora
+            document.getElementById("aurora-cost").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; text-align: center;">
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 15px; font-weight: bold;">Aurora Provisioned</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 20px; font-size: 24px; color: #fff; background-color: #b3c6c1;">
+                            $${auroraCostStandard.toFixed(2)}
+                        </td>
+                    </tr>
+                </table>
+            `;
+            document.getElementById("aurora-optimized-cost").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; text-align: center;">
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 15px; font-weight: bold;">IO Optimized</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 20px; font-size: 24px; color: #fff; background-color: #b3c6c1;">
+                            $${auroraCostOptimized.toFixed(2)}
+                        </td>
+                    </tr>
+                </table>
+            `;
+
+            // Cockroach
+            document.getElementById("cockroachdb-cost").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; text-align: center;">
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 15px; font-weight: bold;">CockroachDB</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 20px; font-size: 24px; color: #fff; background-color: #b3c6c1;">
+                            $${cockroachdbCost.toFixed(2)}
+                        </td>
+                    </tr>
+                </table>
+            `;
+            document.getElementById("self-managed-cost").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; text-align: center;">
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 15px; font-weight: bold;">Self Managed</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 20px; font-size: 24px; color: #fff; background-color: #b3c6c1;">
+                            $${selfmanagedinstanceprice.toFixed(2)}
+                        </td>
+                    </tr>
+                </table>
+            `;
+
+            // Spanner Standard
+            document.getElementById("spanner-standard-cost").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; text-align: center;">
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 15px; font-weight: bold;">Spanner Standard</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 20px; font-size: 24px; color: #fff; background-color: #b3c6c1;">
+                            $${spannerStandardCost.toFixed(2)}
+                        </td>
+                    </tr>
+                </table>
+            `;
+            // Spanner Enterprise
+            document.getElementById("spanner-enterprise-cost").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; text-align: center;">
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 15px; font-weight: bold;">Spanner Enterprise</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 20px; font-size: 24px; color: #fff; background-color: #b3c6c1;">
+                            $${spannerEnterpriseCost.toFixed(2)}
+                        </td>
+                    </tr>
+                </table>
+            `;
+
+            // ==================== BAR HEIGHTS & COLORS ====================
+            const costs = [
+                { id: "aurora-bar",            cost: auroraCostStandard },
+                { id: "aurora-optimized-bar",  cost: auroraCostOptimized },
+                { id: "cockroachdb-bar",       cost: cockroachdbCost },
+                { id: "self-managed-bar",      cost: selfmanagedinstanceprice },
+                { id: "spanner-standard-bar",  cost: spannerStandardCost },
+                { id: "spanner-enterprise-bar",cost: spannerEnterpriseCost }
+            ];
+
+            const maxCost = Math.max(...costs.map(item => item.cost));
+            const minCost = Math.min(...costs.map(item => item.cost));
+
+            function applyGradient(barElement, color) {
+                barElement.style.background = `linear-gradient(to top, ${color} 0%, ${color}80 100%)`;
+            }
+
+            costs.forEach(item => {
+                const barElement = document.getElementById(item.id);
+                barElement.style.height = `${(item.cost / maxCost) * 100}%`;
+
+                if (item.cost === maxCost) {
+                    applyGradient(barElement, "#e74c3c"); // Red = highest
+                } else if (item.cost === minCost) {
+                    applyGradient(barElement, "#27ae60"); // Green = lowest
+                } else {
+                    applyGradient(barElement, "#3498db"); // Blue for middle
+                }
+            });
+        }
+
+        // ============= EVENT LISTENERS =============
+        document.getElementById("aurora-instance-type").addEventListener("change", updateCost);
+        document.getElementById("aurora-storage").addEventListener("input", updateCost);
+        document.getElementById("aurora-io").addEventListener("input", updateCost);
+
+        document.getElementById("cockroachdb-instance-type").addEventListener("change", updateCost);
+        document.getElementById("cockroachdb-storage").addEventListener("input", updateCost);
+        document.getElementById("cockroachdb-io").addEventListener("input", updateCost);
+        document.getElementById("cockroachdb-nodes").addEventListener("input", updateCost);
+
+        document.getElementById("spanner-nodes").addEventListener("input", updateCost);
+        document.getElementById("spanner-storage").addEventListener("input", updateCost);
+        document.getElementById("spanner-backup").addEventListener("input", updateCost);
+
+        document.getElementById("comparison-select").addEventListener("change", updateCost);
+
+        // Initialize
+        updateCost();
+    </script>
+</body>
+</html>

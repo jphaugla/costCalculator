@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Database Cost Comparator: MSSQL on EC2 vs CockroachDB</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans&family=Barlow+Condensed:wght@100&family=Chivo+Mono&family=Luckiest+Guy&family=Oswald:wght@200&family=Permanent+Marker&family=Poppins:wght@400;600&family=Sevillana&display=swap"
+        rel="stylesheet">
+    <style>
+        /* Reuse the same CSS from the previous tool */
+        body {
+            font-family: 'Poppins';
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        h1,
+        h2 {
+            color: #333;
+            text-align: center;
+            margin: 0;
+            padding: 1px 0;
+        }
+
+        table {
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 20px;
+            margin-left: auto;
+            margin-right: auto;
+            box-sizing: border-box;
+            border-collapse: collapse;
+        }
+
+        .cell {
+            padding: 2px;
+            vertical-align: middle;
+            border: 1px solid #ccc;
+        }
+
+        .bar-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            width: 100%;
+        }
+
+        .bar-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 48%;
+            margin-top: 20px;
+        }
+
+        .bar-label {
+            width: 100%;
+            text-align: center;
+            color: #555;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .bar-value {
+            font-weight: bold;
+            color: #333;
+            font-size: 15px;
+        }
+
+        .bar {
+            width: 30px;
+            height: 400px;
+            background-color: #ddd;
+            margin-bottom: 5px;
+            position: relative;
+        }
+
+        .filled-bar {
+            width: 100%;
+            background-color: #3498db;
+            position: absolute;
+            bottom: 0;
+            transition: height 0.3s;
+        }
+
+        input[type="range"],
+        input[type="text"] {
+            width: 90%;
+            margin: 5px 0;
+        }
+
+        select {
+            width: 90%;
+            padding: 5px;
+            margin: 5px 0;
+        }
+
+        .cellmainoption {
+            padding: 10px;
+            vertical-align: middle;
+            border: 1px solid #ccc;
+            text-align: right;
+        }
+
+        .selectmainoption {
+            padding: 2px;
+            margin: 2px;
+            width: auto;
+        }
+
+        .cell>select {
+            display: inline-block;
+            margin-right: 20px;
+        }
+
+        .cell label {
+            margin-right: 10px;
+        }
+
+        .cell>select:last-child {
+            margin-right: 0;
+        }
+
+        .bar-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .bar {
+            width: 30px;
+            height: 400px;
+            background-color: #ddd;
+            margin-right: 10px;
+            position: relative;
+        }
+
+        .cost-breakdown {
+            flex-grow: 1;
+            padding-left: 10px;
+            text-align: left;
+            white-space: pre-wrap;
+            vertical-align: top;
+            font-size: 12px;
+        }
+
+        /* New styles for side-by-side inputs */
+        .input-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .input-group {
+            flex: 1;
+            min-width: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-group label {
+            white-space: nowrap;
+            margin-right: 10px;
+            min-width: 120px;
+        }
+
+        .input-group input {
+            flex: 1;
+            min-width: 60px;
+            max-width: 80px; /* Add max-width to prevent inputs from getting too wide */
+        }
+
+        @media (max-width: 768px) {
+            .input-group {
+                flex: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <table>
+        <tr>
+            <td colspan="2" class="cell">
+                <h2>Database Cost Comparator: MSSQL on EC2 vs CockroachDB</h2>
+            </td>
+        </tr>
+
+        <tr>
+            <td colspan="2" class="cellmainoption">
+                <label for="region-select">Region:</label>
+                <select id="region-select" class="selectmainoption">
+                    <option value="us-east-1">US East (N. Virginia)</option>
+                    <option value="us-west-1">US West (N. California)</option>
+                    <option value="eu-west-1">EU (Ireland)</option>
+                    <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                </select>
+                <label for="comparison-select">Comparison:</label>
+                <select id="comparison-select" class="selectmainoption">
+                    <option value="automatic">Automatic</option>
+                    <option value="manual">Manual</option>
+                </select>
+            </td>
+        </tr>
+
+        <tr>
+            <td class="cell">
+                <h3>MSSQL on EC2</h3>
+                <label for="mssql-nodes">Number of Nodes:</label>
+                <input type="range" id="mssql-nodes" min="1" max="10" value="1">
+                <span id="mssql-node-count">1</span>
+                <br>
+                <label for="ec2-instance-type">Instance Type:</label>
+                <select id="ec2-instance-type">
+                    <option value="m5.large" data-price="0.096" data-cpu="2" data-memory="8">m5.large</option>
+                    <option value="m5.xlarge" data-price="0.192" data-cpu="4" data-memory="16">m5.xlarge</option>
+                    <option value="m5.2xlarge" data-price="0.384" data-cpu="8" data-memory="32">m5.2xlarge</option>
+                    <option value="m5.4xlarge" data-price="0.768" data-cpu="16" data-memory="64">m5.4xlarge</option>
+                    <option value="m5.8xlarge" data-price="1.536" data-cpu="32" data-memory="128">m5.8xlarge</option>
+                </select>
+                <div id="instance-specs" style="margin-left: 10px; font-size: 0.9em; color: #666;">
+                    <span id="cpu-info"></span> vCPU | <span id="memory-info"></span> GiB Memory
+                </div>
+                <br>
+                <label for="sql-edition">SQL Server Edition:</label>
+                <select id="sql-edition">
+                    <option value="standard">Standard Edition ($4000 per 2 cores)</option>
+                    <option value="enterprise">Enterprise Edition ($10000 per 2 cores)</option>
+                </select>
+                <br>
+                <label for="storage-type">Storage Type:</label>
+                <select id="storage-type" onchange="updateStorageFields()">
+                    <option value="gp3" data-price="0.08">General Purpose SSD (gp3)</option>
+                    <option value="gp2" data-price="0.10">General Purpose SSD (gp2)</option>
+                    <option value="io2" data-price="0.125">Provisioned IOPS SSD (io2)</option>
+                    <option value="io1" data-price="0.125">Provisioned IOPS SSD (io1)</option>
+                    <option value="st1" data-price="0.045">Throughput Optimized HDD (st1)</option>
+                </select>
+                <br>
+                <label for="ec2-storage">Storage Size (GB):</label>
+                <input type="text" id="ec2-storage" value="1" onchange="updateIOPS()">
+                <br>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label for="ec2-iops">Provisioned IOPS:</label>
+                        <input type="text" id="ec2-iops" value="3000" disabled>
+                    </div>
+                    <div class="input-group">
+                        <label for="ec2-throughput">Throughput (MB/s):</label>
+                        <input type="text" id="ec2-throughput" value="125" disabled>
+                    </div>
+                </div>
+            </td>
+
+            <td class="cell">
+                <h3>CockroachDB</h3>
+                <label for="cockroachdb-nodes">Number of Nodes:</label>
+                <input type="range" id="cockroachdb-nodes" min="1" max="10" value="1">
+                <span id="node-count">1</span>
+                <br>
+                <label for="cockroachdb-instance-type">Instance Type:</label>
+                <select id="cockroachdb-instance-type">
+                    <option value="standard-2vcpu" data-price="0.455" selected>2 vCPUs (Standard)</option>
+                    <option value="standard-4vcpu" data-price="0.81">4 vCPUs (Standard)</option>
+                    <option value="standard-8vcpu" data-price="1.439">8 vCPUs (Standard)</option>
+                    <option value="standard-16vcpu" data-price="2.797">16 vCPUs (Standard)</option>
+                    <option value="standard-32vcpu" data-price="5.297">32 vCPUs (Standard)</option>
+                    <option value="advanced-2vcpu" data-price="0.523">2 vCPUs (Advanced)</option>
+                    <option value="advanced-4vcpu" data-price="0.931">4 vCPUs (Advanced)</option>
+                    <option value="advanced-8vcpu" data-price="1.655">8 vCPUs (Advanced)</option>
+                    <option value="advanced-16vcpu" data-price="3.217">16 vCPUs (Advanced)</option>
+                    <option value="advanced-32vcpu" data-price="6.091">32 vCPUs (Advanced)</option>
+                </select>
+                <br>
+                <label for="cockroachdb-storage">Storage Size (GB):</label>
+                <input type="text" id="cockroachdb-storage" value="1">
+                <br>
+                <label for="cockroachdb-io">I/O Requests (per million):</label>
+                <input type="text" id="cockroachdb-io" value="1">
+                <br>
+                <label for="cockroachdb-discount">Discount (%):</label>
+                <input type="range" id="cockroachdb-discount" min="0" max="100" value="0">
+                <span id="discount-value">0%</span>
+            </td>
+        </tr>
+
+        <tr>
+            <td class="cell">
+                <div class="bar-group">
+                    <div class="bar-container">
+                        <div class="bar">
+                            <div id="mssql-bar" class="filled-bar"></div>
+                        </div>
+                        <div class="cost-breakdown">
+                            <span id="mssql-cost" class="bar-value">$0.00</span>
+                            <span id="mssql-breakdown"></span>
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <td class="cell">
+                <div class="bar-group">
+                    <div class="bar-container">
+                        <div class="bar">
+                            <div id="cockroachdb-bar" class="filled-bar"></div>
+                        </div>
+                        <div class="cost-breakdown">
+                            <span id="cockroachdb-cost" class="bar-value">$0.00</span>
+                            <span id="cockroachdb-breakdown"></span>
+                        </div>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar">
+                            <div id="self-managed-bar" class="filled-bar"></div>
+                        </div>
+                        <div class="cost-breakdown">
+                            <span id="self-managed-cost" class="bar-value">$0.00</span>
+                            <span id="self-managed-breakdown"></span>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <script>
+        function updateStorageFields() {
+            const storageType = document.getElementById("storage-type").value;
+            const iopsInput = document.getElementById("ec2-iops");
+            const throughputInput = document.getElementById("ec2-throughput");
+            
+            switch(storageType) {
+                case 'gp3':
+                    iopsInput.disabled = false;
+                    throughputInput.disabled = false;
+                    iopsInput.value = '3000';
+                    throughputInput.value = '125';
+                    break;
+                case 'gp2':
+                    iopsInput.disabled = true;
+                    throughputInput.disabled = true;
+                    updateIOPS();
+                    break;
+                case 'io1':
+                case 'io2':
+                    iopsInput.disabled = false;
+                    throughputInput.disabled = true;
+                    iopsInput.value = '1000';
+                    break;
+                case 'st1':
+                    iopsInput.disabled = true;
+                    throughputInput.disabled = true;
+                    iopsInput.value = '0';
+                    throughputInput.value = '0';
+                    break;
+            }
+            updateCost();
+        }
+
+        function updateIOPS() {
+            const storageType = document.getElementById("storage-type").value;
+            const storageSize = parseInt(document.getElementById("ec2-storage").value) || 0;
+            
+            if (storageType === 'gp2') {
+                // GP2 IOPS calculation: min(3000, max(100, 3×storage_size))
+                const calculatedIOPS = Math.min(3000, Math.max(100, 3 * storageSize));
+                document.getElementById("ec2-iops").value = calculatedIOPS;
+            }
+        }
+
+        function calculateStorageCost(storageType, storageSize, iops, throughput) {
+            let storageCost = 0;
+            let iopsCost = 0;
+            let throughputCost = 0;
+            
+            switch(storageType) {
+                case 'gp3':
+                    storageCost = storageSize * 0.08;
+                    if (iops > 3000) {
+                        iopsCost = (iops - 3000) * 0.005;
+                    }
+                    if (throughput > 125) {
+                        throughputCost = (throughput - 125) * 0.04;
+                    }
+                    break;
+                    
+                case 'gp2':
+                    storageCost = storageSize * 0.10;
+                    break;
+                    
+                case 'io2':
+                    storageCost = storageSize * 0.125;
+                    if (iops <= 32000) {
+                        iopsCost = iops * 0.065;
+                    } else if (iops <= 64000) {
+                        iopsCost = (32000 * 0.065) + ((iops - 32000) * 0.046);
+                    } else {
+                        iopsCost = (32000 * 0.065) + (32000 * 0.046) + ((iops - 64000) * 0.032);
+                    }
+                    break;
+                    
+                case 'io1':
+                    storageCost = storageSize * 0.125;
+                    iopsCost = iops * 0.065;
+                    break;
+                    
+                case 'st1':
+                    storageCost = storageSize * 0.045;
+                    break;
+            }
+            
+            return {
+                storage: storageCost,
+                iops: iopsCost,
+                throughput: throughputCost,
+                total: storageCost + iopsCost + throughputCost
+            };
+        }
+
+        function updateCockroachDBAutomatic() {
+            const comparisonType = document.getElementById("comparison-select").value;
+            const nodesSlider = document.getElementById("cockroachdb-nodes");
+            const cockroachDBInstanceSelect = document.getElementById("cockroachdb-instance-type");
+            
+            if (comparisonType === "automatic") {
+                // Get MSSQL CPU cores
+                const ec2InstanceType = document.getElementById("ec2-instance-type");
+                const ec2Cpu = parseInt(ec2InstanceType.options[ec2InstanceType.selectedIndex].getAttribute("data-cpu"));
+                
+                // Calculate number of nodes (1 node per 8 cores, minimum 1)
+                const recommendedNodes = Math.max(1, Math.ceil(ec2Cpu / 8));
+                nodesSlider.value = recommendedNodes;
+                document.getElementById("node-count").textContent = recommendedNodes;
+                
+                // Select matching instance type (8 vCPUs)
+                const targetOption = Array.from(cockroachDBInstanceSelect.options)
+                    .find(option => option.text.includes("8 vCPUs") && option.text.includes("Standard"));
+                if (targetOption) {
+                    cockroachDBInstanceSelect.value = targetOption.value;
+                }
+                
+                // Disable manual controls
+                nodesSlider.disabled = true;
+                cockroachDBInstanceSelect.disabled = true;
+            } else {
+                // Enable manual controls
+                nodesSlider.disabled = false;
+                cockroachDBInstanceSelect.disabled = false;
+            }
+        }
+
+        function updateNodeCount() {
+            const nodesSlider = document.getElementById("cockroachdb-nodes");
+            const nodeCountDisplay = document.getElementById("node-count");
+            nodeCountDisplay.textContent = nodesSlider.value;
+        }
+
+        function updateDiscountValue() {
+            const discountSlider = document.getElementById("cockroachdb-discount");
+            const discountDisplay = document.getElementById("discount-value");
+            discountDisplay.textContent = `${discountSlider.value}%`;
+        }
+
+        function updateCost() {
+            // Update automatic settings if needed
+            updateCockroachDBAutomatic();
+            
+            // MSSQL on EC2 calculations
+            const ec2InstanceType = document.getElementById("ec2-instance-type");
+            const ec2Price = parseFloat(ec2InstanceType.options[ec2InstanceType.selectedIndex].getAttribute("data-price"));
+            const ec2Cpu = parseInt(ec2InstanceType.options[ec2InstanceType.selectedIndex].getAttribute("data-cpu"));
+            const sqlEdition = document.getElementById("sql-edition").value;
+            const mssqlNodes = parseInt(document.getElementById("mssql-nodes").value);
+
+            // Storage calculations
+            const storageType = document.getElementById("storage-type").value;
+            const storageSize = parseFloat(document.getElementById("ec2-storage").value) || 0;
+            const iops = parseInt(document.getElementById("ec2-iops").value) || 0;
+            const throughput = parseInt(document.getElementById("ec2-throughput").value) || 0;
+            
+            const storageCosts = calculateStorageCost(storageType, storageSize, iops, throughput);
+
+            // SQL Server licensing cost
+            const sqlLicenseCostPer2Cores = sqlEdition === "standard" ? 4000 : 10000;
+            const sqlLicenseCost = (ec2Cpu / 2) * sqlLicenseCostPer2Cores * mssqlNodes;
+
+            // Total MSSQL on EC2 cost
+            const mssqlCost = (ec2Price * 730 * mssqlNodes) + (storageCosts.total * mssqlNodes) + (sqlLicenseCost/12);
+
+            // CockroachDB calculations
+            const cockroachDBInstanceType = document.getElementById("cockroachdb-instance-type");
+            const cockroachDBPrice = parseFloat(cockroachDBInstanceType.options[cockroachDBInstanceType.selectedIndex].getAttribute("data-price"));
+            const cockroachDBNodes = parseInt(document.getElementById("cockroachdb-nodes").value);
+            const cockroachDBStorage = parseFloat(document.getElementById("cockroachdb-storage").value) || 0;
+            const cockroachDBIO = parseFloat(document.getElementById("cockroachdb-io").value) || 0;
+            const discount = parseInt(document.getElementById("cockroachdb-discount").value) / 100;
+
+            // Calculate CockroachDB costs
+            const computeCost = cockroachDBPrice * 730 * cockroachDBNodes;
+            const storageCost = cockroachDBStorage * 0.10 * cockroachDBNodes; // $0.10 per GB
+            const ioCost = cockroachDBIO * 0.20; // $0.20 per million I/O requests
+            const totalCockroachDBCost = (computeCost + storageCost + ioCost) * (1 - discount);
+
+            // Calculate Self-Managed CockroachDB costs
+            const selfManagedInfraCost = ec2Price * 730 * 2; // Infrastructure cost for 2 nodes
+            const licenseCostPerCore = 2000; // $2000 per core
+            const totalLicenseCost = (ec2Cpu * licenseCostPerCore)/12; // License cost based on EC2 cores
+            const discountedLicenseCost = totalLicenseCost * (1 - discount); // Apply discount only to license
+            const totalSelfManagedCost = selfManagedInfraCost + discountedLicenseCost;
+
+            // Update bar heights based on cost
+            const maxCost = Math.max(mssqlCost, totalCockroachDBCost, totalSelfManagedCost);
+
+            const mssqlBarHeight = (mssqlCost / maxCost) * 100;
+            const cockroachDBBarHeight = (totalCockroachDBCost / maxCost) * 100;
+            const selfManagedBarHeight = (totalSelfManagedCost / maxCost) * 100;
+            
+            document.getElementById("mssql-bar").style.height = `${mssqlBarHeight}%`;
+            document.getElementById("cockroachdb-bar").style.height = `${cockroachDBBarHeight}%`;
+            document.getElementById("self-managed-bar").style.height = `${selfManagedBarHeight}%`;
+
+            // Update cost displays
+            document.getElementById("mssql-cost").textContent = `$${mssqlCost.toFixed(2)}`;
+            document.getElementById("cockroachdb-cost").textContent = `$${totalCockroachDBCost.toFixed(2)}`;
+            document.getElementById("self-managed-cost").textContent = `$${totalSelfManagedCost.toFixed(2)}`;
+            
+            // Update breakdowns
+            document.getElementById("mssql-breakdown").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins', sans-serif;">
+                    <tr>
+                        <td colspan="2" style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057; background-color: #e9ecef; text-align: left;">
+                            MSSQL Cost Breakdown
+                        </td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Compute</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${(ec2Price * 730 * mssqlNodes).toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Storage</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${(storageCosts.storage * mssqlNodes).toFixed(2)}</td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">IOPS</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${(storageCosts.iops * mssqlNodes).toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Throughput</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${(storageCosts.throughput * mssqlNodes).toFixed(2)}</td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">License</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${sqlLicenseCost.toFixed(2)}</td>
+                    </tr>
+                </table>
+            `;
+
+            document.getElementById("cockroachdb-breakdown").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins', sans-serif;">
+                    <tr>
+                        <td colspan="2" style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057; background-color: #e9ecef; text-align: left;">
+                            CockroachDB Cost Breakdown
+                        </td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Compute</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${(computeCost * (1 - discount)).toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Storage</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${(storageCost * (1 - discount)).toFixed(2)}</td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">I/O Requests</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${(ioCost * (1 - discount)).toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Discount</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">${(discount * 100).toFixed(0)}%</td>
+                    </tr>
+                </table>
+            `;
+
+            document.getElementById("self-managed-breakdown").innerHTML = `
+                <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins', sans-serif;">
+                    <tr>
+                        <td colspan="2" style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057; background-color: #e9ecef; text-align: left;">
+                            Self-Managed CockroachDB Cost Breakdown
+                        </td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Infrastructure Cost</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${selfManagedInfraCost.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">License Cost (After Discount)</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${discountedLicenseCost.toFixed(2)}</td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Discount Applied to License</td>
+                        <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">${(discount * 100).toFixed(0)}%</td>
+                    </tr>
+                </table>
+            `;
+        }
+
+        function updateInstanceSpecs() {
+            const select = document.getElementById("ec2-instance-type");
+            const selectedOption = select.options[select.selectedIndex];
+            const cpu = selectedOption.getAttribute("data-cpu");
+            const memory = selectedOption.getAttribute("data-memory");
+            
+            document.getElementById("cpu-info").textContent = cpu;
+            document.getElementById("memory-info").textContent = memory;
+        }
+
+        // Event Listeners
+        document.getElementById("ec2-instance-type").addEventListener("change", function() {
+            updateInstanceSpecs();
+            updateCost();
+        });
+        document.getElementById("sql-edition").addEventListener("change", updateCost);
+        document.getElementById("storage-type").addEventListener("change", updateStorageFields);
+        document.getElementById("ec2-storage").addEventListener("input", function() {
+            updateIOPS();
+            updateCost();
+        });
+        document.getElementById("ec2-iops").addEventListener("input", updateCost);
+        document.getElementById("ec2-throughput").addEventListener("input", updateCost);
+        document.getElementById("cockroachdb-instance-type").addEventListener("change", updateCost);
+        document.getElementById("cockroachdb-storage").addEventListener("input", updateCost);
+        document.getElementById("cockroachdb-io").addEventListener("input", updateCost);
+        document.getElementById("cockroachdb-nodes").addEventListener("input", function() {
+            updateNodeCount();
+            updateCost();
+        });
+        document.getElementById("comparison-select").addEventListener("change", updateCost);
+        document.getElementById("mssql-nodes").addEventListener("input", function() {
+            updateMSSQLNodeCount();
+            updateCost();
+        });
+        document.getElementById("cockroachdb-discount").addEventListener("input", function() {
+            updateDiscountValue();
+            updateCost();
+        });
+
+        // Initial setup
+        updateNodeCount();
+        updateDiscountValue();
+        updateStorageFields();
+        updateCockroachDBAutomatic();
+        updateCost();
+        updateInstanceSpecs();
+
+        function updateMSSQLNodeCount() {
+            const nodeCountDisplay = document.getElementById("mssql-node-count");
+            const nodesSlider = document.getElementById("mssql-nodes");
+            nodeCountDisplay.textContent = nodesSlider.value;
+        }
+    </script>
+</body>
+
+</html>
