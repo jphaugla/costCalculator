@@ -39,11 +39,13 @@
       border: 1px solid #ccc;
       /* Add a border around each cell */
     }
-
+    .cell-top-align {
+      vertical-align: top; /* Ensures these cells align at the top */
+    }
     .bar-group {
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
+      align-items: flex-start;
       width: 100%;
     }
 
@@ -226,10 +228,10 @@
         <span id="computed-io"> (Computed I/O: 0.00 million)</span>
       </td>
 
-      <td class="cell">
+      <td class="cell cell-top-align">
         <h3>CockroachDB</h3>
         <label for="cockroachdb-nodes">Number of Nodes:</label>
-        <input type="range" id="cockroachdb-nodes" min="3" max="30" step="3" value="3">
+        <input type="range" id="cockroachdb-nodes" min="3" max="60" step="3" value="3">
         <span id="node-count">1</span>
         <br>
         <label for="cockroachdb-instance-type">Instance Type:</label>
@@ -253,6 +255,9 @@
         <label for="cockroachdb-ops">Average Operations per Second:</label>
         <input type="text" id="cockroachdb-ops" value="1">
         <span id="cockroach-computed-io"> (Computed I/O: 0.00 million)</span>
+        <br>
+        <label for="cockroachdb-license">License Cost/CPU:</label>
+        <input type="text" id="cockroachdb-license" value="0">
       </td>
 
       <td class="cell">
@@ -273,7 +278,7 @@
     </tr>
 
     <tr>
-      <td class="cell">
+      <td class="cell cell-top-align">
         <div class="bar-group">
           <div class="bar-container">
             <div class="bar">
@@ -296,7 +301,7 @@
         </div>
       </td>
 
-      <td class="cell">
+      <td class="cell cell-top-align">
         <div class="bar-group">
           <div class="bar-container">
             <div class="bar">
@@ -609,10 +614,6 @@ function updateUsageSchedule() {
     const mediumPct = getUsagePct("usage-medium");
     const peakPct = getUsagePct("usage-peak");
     
-    // Fixed node counts per level.
-//    const minimalNodes = 3, lowNodes = 6, mediumNodes = 9;
-//     let peakNodes = cockroachdbNodes - 9;
-//     if (peakNodes < 0) peakNodes = 0;
     const minimalNodes = parseInt(document.getElementById("nodes-minimal").value) || 0;
     const lowNodes = parseInt(document.getElementById("nodes-low").value) || 0;
     const mediumNodes = parseInt(document.getElementById("nodes-medium").value) || 0;
@@ -624,6 +625,23 @@ function updateUsageSchedule() {
     let cockroachOps = parseFloat(document.getElementById("cockroachdb-ops").value);
     let computedCockroachIO = (cockroachOps * 730 * 3600) / 1000000;
     
+    // --- License Cost Calculation (for Self Managed) ---
+    // we parse the vCPU count from the selected CockroachDB text
+    const cockroachSelectedText =
+        cockroachdbInstanceType.options[cockroachdbInstanceType.selectedIndex].text; // e.g. "4 vCPUs (Standard)"
+    // License cost input (new)
+    const licenseCostPerCpu = parseFloat(
+      document.getElementById("cockroachdb-license").value
+    ) || 0; // fallback to 0 if invalid
+    
+    let nodeCpus = 0;
+    const cpuMatch = cockroachSelectedText.match(/(\d+)\s*vCPUs/);
+    if (cpuMatch) {
+      nodeCpus = parseInt(cpuMatch[1]); // e.g. 4
+    }
+    // total CPUs = nodeCpus * cockroachdbNodes
+    const totalCpus = nodeCpus * cockroachdbNodes;
+    const licenseCost = totalCpus * licenseCostPerCpu;
     const cockroachdbPrice = parseFloat(
       cockroachdbInstanceType.options[cockroachdbInstanceType.selectedIndex].getAttribute("data-price")
     );
@@ -653,7 +671,6 @@ function updateUsageSchedule() {
     } else {
       document.getElementById("cockroach-computed-io").textContent = ` (Computed I/O: ${computedCockroachIO.toFixed(2)} million)`;
     }
-    
     if (mode === "manual") {
       document.getElementById("cockroachdb-storage").disabled = false;
       document.getElementById("cockroachdb-ops").disabled = false;
@@ -722,7 +739,7 @@ function updateUsageSchedule() {
       </tr>
       <tr>
         <td style="border: 1px solid #dee2e6; padding: 20px; font-size: 24px; color: #ffffff; background-color: #b3c6c1;">
-          $${selfmanagedinstancepriceCalc.toFixed(2)}
+          $${(selfmanagedinstancepriceCalc +  licenseCost).toFixed(2)}
         </td>
       </tr>
     </table>
@@ -734,7 +751,7 @@ function updateUsageSchedule() {
       </tr>
       <tr>
         <td style="border: 1px solid #dee2e6; padding: 20px; font-size: 24px; color: #ffffff; background-color: #b3c6c1;">
-          $${selfManagedOptimizedCost.toFixed(2)}
+          $${(selfManagedOptimizedCost + licenseCost).toFixed(2)}
         </td>
       </tr>
     </table>
@@ -773,6 +790,18 @@ document.getElementById("self-managed-breakdown").innerHTML = `
       <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">I/O</td>
       <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$0</td>
     </tr>
+    <tr>
+       <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Total Nodes</td>
+       <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">${cockroachdbNodes}</td>
+     </tr>
+     <tr>
+       <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Total CPUs</td>
+       <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">${totalCpus}</td>
+     </tr>
+     <tr style="background-color: #f8f9fa;">
+       <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">License Cost</td>
+       <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${licenseCost.toFixed(2)}</td>
+     </tr>
   </table>
 `;
 
@@ -791,6 +820,18 @@ document.getElementById("self-managed-optimized-breakdown").innerHTML = `
       <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">I/O</td>
       <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$0</td>
     </tr>
+    <tr>
+       <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Total Nodes</td>
+       <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">${cockroachdbNodes}</td>
+     </tr>
+     <tr>
+       <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Total CPUs</td>
+       <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">${totalCpus}</td>
+     </tr>
+     <tr style="background-color: #f8f9fa;">
+       <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">License Cost</td>
+       <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${licenseCost.toFixed(2)}</td>
+     </tr>
   </table>
 `; 
     
@@ -906,7 +947,7 @@ document.getElementById("self-managed-optimized-breakdown").innerHTML = `
       { id: "cockroachdb-bar", cost: cockroachdbCost },
       { id: "aurora-optimized-bar", cost: auroraCostOptimized },
       { id: "self-managed-optimized-bar", cost: selfManagedOptimizedCost || 0 },
-      { id: "self-managed-bar", cost: selfmanagedinstancepriceCalc || 0 }
+      { id: "self-managed-bar", cost: selfmanagedinstancepriceCalc + licenseCost || 0 }
     ];
     const maxBarCost = Math.max(...bars.map(item => item.cost));
     const minBarCost = Math.min(...bars.map(item => item.cost));
@@ -940,6 +981,7 @@ document.getElementById("self-managed-optimized-breakdown").innerHTML = `
   document.getElementById("cockroachdb-storage").addEventListener("input", updateCost);
   document.getElementById("cockroachdb-ops").addEventListener("input", updateCost);
   document.getElementById("comparison-select").addEventListener("change", updateCost);
+  document.getElementById("cockroachdb-license").addEventListener("input", updateCost);
   
   // Initial call.
   updateUsageSchedule();
