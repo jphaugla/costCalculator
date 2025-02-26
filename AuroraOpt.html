@@ -630,7 +630,7 @@ function updateUsageSchedule() {
     const cockroachSelectedText =
         cockroachdbInstanceType.options[cockroachdbInstanceType.selectedIndex].text; // e.g. "4 vCPUs (Standard)"
     // License cost input (new)
-    const licenseCostPerCpu = parseFloat(
+    const yearlyLicenseCostPerCpu = parseFloat(
       document.getElementById("cockroachdb-license").value
     ) || 0; // fallback to 0 if invalid
     
@@ -641,7 +641,8 @@ function updateUsageSchedule() {
     }
     // total CPUs = nodeCpus * cockroachdbNodes
     const totalCpus = nodeCpus * cockroachdbNodes;
-    const licenseCost = totalCpus * licenseCostPerCpu;
+    const yearlyLicenseCost = totalCpus * yearlyLicenseCostPerCpu;
+    const licenseCost = yearlyLicenseCost/12;
     const cockroachdbPrice = parseFloat(
       cockroachdbInstanceType.options[cockroachdbInstanceType.selectedIndex].getAttribute("data-price")
     );
