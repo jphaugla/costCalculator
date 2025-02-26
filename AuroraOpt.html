@@ -234,16 +234,16 @@
         <br>
         <label for="cockroachdb-instance-type">Instance Type:</label>
         <select id="cockroachdb-instance-type">
-          <option value="standard-2vcpu" data-price="0.455">2 vCPUs (Standard)</option>
-          <option value="standard-4vcpu" data-price="0.81">4 vCPUs (Standard)</option>
-          <option value="standard-8vcpu" data-price="1.439">8 vCPUs (Standard)</option>
-          <option value="standard-16vcpu" data-price="2.797">16 vCPUs (Standard)</option>
-          <option value="standard-32vcpu" data-price="5.297">32 vCPUs (Standard)</option>
-          <option value="advanced-2vcpu" data-price="0.523">2 vCPUs (Advanced)</option>
-          <option value="advanced-4vcpu" data-price="0.931">4 vCPUs (Advanced)</option>
-          <option value="advanced-8vcpu" data-price="1.655">8 vCPUs (Advanced)</option>
-          <option value="advanced-16vcpu" data-price="3.217">16 vCPUs (Advanced)</option>
-          <option value="advanced-32vcpu" data-price="6.091">32 vCPUs (Advanced)</option>
+            <option value="standard-2vcpu" data-selfmanagedprice="0.096" data-price="0.455">2 vCPUs (Standard)</option>
+            <option value="standard-4vcpu" data-selfmanagedprice="0.192" data-price="0.81">4 vCPUs (Standard)</option>
+            <option value="standard-8vcpu" data-selfmanagedprice="0.384" data-price="1.439">8 vCPUs (Standard)</option>
+            <option value="standard-16vcpu" data-selfmanagedprice=".768" data-price="2.797">16 vCPUs (Standard)</option>
+            <option value="standard-32vcpu" data-selfmanagedprice="1.536" data-price="5.297">32 vCPUs (Standard)</option>
+            <option value="advanced-2vcpu" data-selfmanagedprice="0.096" data-price="0.523">2 vCPUs (Advanced)</option>
+            <option value="advanced-4vcpu" data-selfmanagedprice="0.193" data-price="0.931">4 vCPUs (Advanced)</option>
+            <option value="advanced-8vcpu" data-selfmanagedprice="0.384" data-price="1.655">8 vCPUs (Advanced)</option>
+            <option value="advanced-16vcpu" data-selfmanagedprice="0.768" data-price="3.217">16 vCPUs (Advanced)</option>
+            <option value="advanced-32vcpu" data-selfmanagedprice="1.536" data-price="6.091">32 vCPUs (Advanced)</option>
         </select>
         <br>
         <label for="cockroachdb-storage">Storage Size (GB):</label>
@@ -340,6 +340,7 @@
 // Global variables.
 var cockroachdbCost = 0;
 var selfmanagedinstancepriceCalc = 0;
+var selfmanagedinstanceprice = 200;
 
 document.addEventListener("DOMContentLoaded", function() {
   // Helper: Safely get a usage percentage from an element.
@@ -536,11 +537,6 @@ function updateUsageSchedule() {
     const auroraOptimizedPrice = parseFloat(
       auroraInstanceType.options[auroraInstanceType.selectedIndex].getAttribute("data-optimized")
     );
-    // Default self-managed price to standard if ec2-selfmanagedprice is missing.
-    const selfmanagedPrice = parseFloat(
-      auroraInstanceType.options[auroraInstanceType.selectedIndex].getAttribute("ec2-selfmanagedprice")
-    ) || auroraStandardPrice;
-    console.log("self managed price 3:", selfmanagedPrice);
     
     const auroraMemory = auroraInstanceType.options[auroraInstanceType.selectedIndex].getAttribute("data-memory");
     document.getElementById("aurora-memory").textContent = `Memory: ${auroraMemory} GiB`;
@@ -633,7 +629,20 @@ function updateUsageSchedule() {
     );
     const cockroachdbStorageCost = cockroachdbStorage * 0.00045792 * 730;
     const cockroachdbIOCost = computedCockroachIO * 0.00001956947162 * 730;
+    // Debugging: Print all variables
+    console.log("CockroachDB Instance Type:", cockroachdbInstanceType);
+    console.log("CockroachDB Storage:", cockroachdbStorage);
+    console.log("CockroachDB IO:", computedCockroachIO);
+    console.log("CockroachDB Price:", cockroachdbPrice);
+    console.log("CockroachDB Storage Cost:", cockroachdbStorageCost);
+    console.log("CockroachDB IO Cost:", cockroachdbIOCost);
     
+    const cockroachOption = cockroachdbInstanceType.options[cockroachdbInstanceType.selectedIndex];
+    // Try to get a dedicated self-managed price attribute; if not present, fall back to data-price.
+    const selfmanagedPrice = parseFloat(cockroachOption.getAttribute("data-selfmanagedprice")) ||
+    				parseFloat(cockroachOption.getAttribute("data-price"));
+
+    console.log("self managed price 3:", selfmanagedPrice);
     const mode = document.getElementById("comparison-select").value;
     if (mode !== "manual") {
       // In automatic mode, mirror Aurora's ops to CockroachDB.
@@ -683,7 +692,7 @@ function updateUsageSchedule() {
       document.getElementById("cockroachdb-storage").value = auroraStorage * 3;
       const nodesVal = parseInt(document.getElementById("cockroachdb-nodes").value);
       cockroachdbCost = (cockroachdbPrice * 730 * nodesVal) + cockroachdbStorageCost + cockroachdbIOCost;
-      selfmanagedinstancepriceCalc = (selfmanagedPrice * 730 * nodesVal) + auroraStorageCost;
+      selfmanagedinstancepriceCalc = (selfmanagedPrice * 730 * nodesVal) + auroraStorageCost;  // EBS is the same cost as EBS ;
     }
     
     const selfManagedCostMinimal = (selfmanagedPrice * minimalNodes * 730) * minimalPct;
@@ -896,7 +905,7 @@ document.getElementById("self-managed-optimized-breakdown").innerHTML = `
       { id: "aurora-bar", cost: auroraCostStandard },
       { id: "cockroachdb-bar", cost: cockroachdbCost },
       { id: "aurora-optimized-bar", cost: auroraCostOptimized },
-      { id: "self-managed-optimized-bar", cost: selfmanagedinstancepriceCalc || 0 },
+      { id: "self-managed-optimized-bar", cost: selfManagedOptimizedCost || 0 },
       { id: "self-managed-bar", cost: selfmanagedinstancepriceCalc || 0 }
     ];
     const maxBarCost = Math.max(...bars.map(item => item.cost));
