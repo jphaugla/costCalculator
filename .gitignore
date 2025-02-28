@@ -7,7 +7,8 @@ __pycache__/
 *.so
 # pricing files
 pricing/bkup
-pricing/*.csv
+pricing/ec2_pricing.csv
+pricing/aurora_pricing.csv
 pricing/*.json
 
 # Distribution / packaging

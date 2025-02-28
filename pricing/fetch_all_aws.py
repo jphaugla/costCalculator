@@ -63,12 +63,11 @@ def fetch_ec2_pricing():
         on_demand_terms = pricing_data.get('terms', {}).get('OnDemand', {})
         sku_index = 0
         for sku, product in pricing_data.get('products', {}).items():
-            #if sku_index >= 20:
-            #    break
             if product.get('productFamily', '') == 'Compute Instance':
                 attributes = product.get('attributes', {})
                 instance_type = attributes.get('instanceType', '')
-                if instance_type:
+                # Only process rows with an instance type and where preInstalledSw equals "NA"
+                if instance_type and attributes.get('preInstalledSw', '') == "NA" and attributes.get('operatingSystem', '') == "Linux" and  attributes.get('licenseModel', '') == "No License required" and attributes.get('tenancy', '') == "Shared"  and attributes.get('capacitystatus', '') == "UnusedCapacityReservation":
                     price_per_hour = "N/A"
                     if sku in on_demand_terms:
                         term = list(on_demand_terms[sku].values())[0]
@@ -89,6 +88,24 @@ def fetch_ec2_pricing():
         print(f"EC2 pricing data has been saved to {output_file}")
     except Exception as e:
         print(f"An unexpected error occurred while processing EC2 data: {e}")
+
+def fetch_aurora_pricing_json():
+    output_file = 'aurora_pricing_raw.json'
+    if os.path.exists(output_file):
+        answer = input(f"{output_file} already exists. Overwrite? (y/n): ")
+        if answer.lower() != 'y':
+            print(f"Skipping writing {output_file}")
+            return
+    base_url = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonRDS/current/index.json"
+    try:
+        print("Fetching raw Aurora pricing JSON data...")
+        response = requests.get(base_url)
+        data = response.json()
+        with open(output_file, 'w') as f:
+            json.dump(data, f, indent=2)
+        print(f"Raw Aurora pricing JSON data has been saved to {output_file}")
+    except Exception as e:
+        print(f"Error fetching raw Aurora pricing JSON data: {e}")
 
 
 def fetch_aurora_pricing():

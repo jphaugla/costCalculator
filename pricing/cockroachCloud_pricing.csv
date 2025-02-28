@@ -1,0 +1,13 @@
+Instance Name,vCPU,Memory (GiB),Cost per Hour (USD),Storage Cost
+standard-2vcpu,2,8,0.23,0.19
+standard-4vcpu,4,16,0.45,0.18
+standard-8vcpu,8,32,0.90,0.18
+standard-12vcpu,12,48,1.36,0.18 
+standard-16vcpu,16,64,1.81,0.18 
+standard-24vcpu,24,96,2.71,0.18
+standard-32vcpu,32,128,3.62,0.33
+advanced-2vcpu,2,8,0.42,0.33 
+advanced-4vcpu,4,16,0.74,0.33 
+advanced-8vcpu,8,32,1.32,0.33
+advanced-16vcpu,16,64,2.57,0.33 
+advanced-32vcpu,32,128,4.87,0.33 

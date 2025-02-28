@@ -245,7 +245,7 @@
   <script>
     // Load CockroachDB pricing data from cockroachCloud_pricing.csv and populate the CockroachDB instance type dropdown.
     function loadCockroachPricingData() {
-      fetch("http://localhost:8000/cockroachCloud_pricing.csv")
+      fetch("http://localhost:8000/cockroachCloud_pricing.csv?cacheBust=" + new Date().getTime())
         .then(response => response.text())
         .then(data => {
           const lines = data.split("\n").filter(line => line.trim() !== "");
@@ -254,13 +254,16 @@
           let count = 0;
           lines.forEach(line => {
             const cols = line.split(",");
-            if (cols.length >= 4) {
+            console.log(`before parse of line, line column count is  ${cols.length}`);
+            console.log(`${line}`);
+            if (cols.length >= 5) {
               const instanceName = cols[0].trim();
               const vcpu = cols[1].trim();
               const memory = cols[2].trim();
               const cost = parseFloat(cols[3].trim());
+              const storage = parseFloat(cols[4].trim());
               const optionText = `${instanceName} (${vcpu} vCPUs, ${memory} GiB)`;
-              optionsHtml += `<option value="${instanceName}" crdb-cloud-price="${cost}" crdb-cloud-memory="${memory}" crdb-cloud-cpu="${vcpu}">${optionText}</option>`;
+              optionsHtml += `<option value="${instanceName}" crdb-cloud-price="${cost}" crdb-cloud-memory="${memory}" crdb-cloud-cpu="${vcpu}" crdb-cloud-storage-cost="${storage}">${optionText}</option>`;
               count++;
             }
           });
@@ -275,7 +278,7 @@
 
 function loadAuroraPricingData() {
   const selectedRegion = document.getElementById("region-select").value;
-  fetch("http://localhost:8000/aurora_pricing.csv")
+  fetch("http://localhost:8000/aurora_pricing.csv?cacheBust=" + new Date().getTime())
     .then(response => response.text())
     .then(data => {
       const lines = data.split("\n").filter(line => line.trim() !== "");
@@ -333,7 +336,7 @@ function loadAuroraPricingData() {
 
 function loadEc2InstancePricingData() {
   const selectedRegion = document.getElementById("region-select").value;
-  fetch("http://localhost:8000/ec2_pricing.csv")
+  fetch("http://localhost:8000/ec2_pricing.csv?cacheBust=" + new Date().getTime())
     .then(response => response.text())
     .then(data => {
       const lines = data.split("\n").filter(line => line.trim() !== "");
@@ -416,7 +419,7 @@ function loadEc2InstancePricingData() {
     
 function updateCost() {
   try {
-    // --- Aurora Calculations (unchanged) ---
+    // --- Aurora Calculations ---
     const auroraInstanceType = document.getElementById("aurora-instance-type");
     if (!auroraInstanceType) throw new Error("Element 'aurora-instance-type' not found.");
     const auroraStorage = parseFloat(document.getElementById("aurora-storage").value) || 0;
@@ -450,12 +453,15 @@ function updateCost() {
     // --- CockroachDB Calculations ---
     const cockroachdbInstanceType = document.getElementById("cockroachdb-instance-type");
     if (!cockroachdbInstanceType) throw new Error("Element 'cockroachdb-instance-type' not found.");
+    // In automatic mode, update cockroachdb-storage to 3x the Aurora storage.
+    const mode = document.getElementById("comparison-select").value.trim().toLowerCase();
+    if (mode !== "manual") {
+      document.getElementById("cockroachdb-storage").value = (auroraStorage * 3).toString();
+    }
     const cockroachdbStorage = parseFloat(document.getElementById("cockroachdb-storage").value) || 0;
     let cockroachOps = parseFloat(document.getElementById("cockroachdb-ops").value) || 0;
     let computedCockroachIO = (cockroachOps * 730 * 3600) / 1000000;
-    // In automatic mode, mirror Aurora's ops
-    const mode = document.getElementById("comparison-select").value;
-    if (mode !== "manual") {
+    if (mode === "automatic") {
       cockroachOps = auroraOps;
       document.getElementById("cockroachdb-ops").value = auroraOps;
       computedCockroachIO = (cockroachOps * 730 * 3600) / 1000000;
@@ -467,14 +473,21 @@ function updateCost() {
     const cockroachOption = cockroachdbInstanceType.options[cockroachdbInstanceType.selectedIndex];
     if (!cockroachOption) throw new Error("No CockroachDB option selected.");
     const cockroachdbPrice = parseFloat(cockroachOption.getAttribute("crdb-cloud-price")) || 0;
-    const cockroachdbStorageCost = cockroachdbStorage * 0.00045792 * 730;
+    let crdbStorageCostAttr = cockroachOption.getAttribute("crdb-cloud-storage-cost");
+    let monthlyPricePerGB;
+    if (crdbStorageCostAttr !== null && !isNaN(parseFloat(crdbStorageCostAttr))) {
+      monthlyPricePerGB = parseFloat(crdbStorageCostAttr);
+    } else {
+      monthlyPricePerGB = cockroachdbStorage * 0.00045792 * 730;
+    }
+    // Use the updated monthly price per GB multiplied by the storage value.
+    const cockroachdbStorageCost = monthlyPricePerGB * cockroachdbStorage;
     const cockroachdbIOCost = computedCockroachIO * 0.00001956947162 * 730;
     const cockroachdbNodes = parseInt(document.getElementById("cockroachdb-nodes").value) || 3;
     const nodeCountElem = document.getElementById("node-count");
     if (nodeCountElem) {
       nodeCountElem.textContent = cockroachdbNodes;
     }
-    // CockroachDB cost always uses the Cockroach Cloud pricing.
     const cockroachdbTotalCost = (cockroachdbPrice * 730 * cockroachdbNodes) + cockroachdbStorageCost + cockroachdbIOCost;
 
     // --- Self Managed Calculations ---
@@ -483,11 +496,17 @@ function updateCost() {
     if (!ec2InstanceType) throw new Error("Element 'ec2-instance-type' not found.");
     const ec2Option = ec2InstanceType.options[ec2InstanceType.selectedIndex];
     const ec2Cost = parseFloat(ec2Option.getAttribute("ec2-cost")) || 0;
-    // Here, assume self-managed instance cost is calculated based on EC2 pricing and the same node count
     const selfManagedTotalCost = (ec2Cost * 730 * cockroachdbNodes) + auroraStorageCost;
 
-    // Calculate license cost for CockroachDB
+    // --- License Cost Calculation ---
     const licenseCostPerCpu = parseFloat(document.getElementById("cockroachdb-license").value) || 0;
+    const nodeCpus = parseInt(cockroachOption.getAttribute("crdb-cloud-cpu")) || 0;
+    const totalCpus = nodeCpus * cockroachdbNodes;
+    const yearlylicenseCost = totalCpus * licenseCostPerCpu;
+    const licenseCost = yearlylicenseCost/12;
+
+    // --- Mode-specific Branch ---
+    let selfmanagedPrice = 0;
     if (mode === "manual") {
       document.getElementById("cockroachdb-storage").disabled = false;
       document.getElementById("cockroachdb-ops").disabled = false;
@@ -495,21 +514,17 @@ function updateCost() {
       document.getElementById("cockroachdb-instance-type").disabled = false;
       document.getElementById("ec2-instance-type").disabled = false;
       document.getElementById("cockroachdb-license").disabled = false;
-      // For manual mode, get self-managed cost from the Cockroach option’s ec2-cost attribute.
+      // In manual mode, get self-managed cost from the Cockroach option’s ec2-cost attribute.
       selfmanagedPrice = parseFloat(cockroachOption.getAttribute("ec2-cost"));
-      cockroachdbCost = (cockroachdbPrice * 730 * cockroachdbNodes) + cockroachdbStorageCost + cockroachdbIOCost;
-      selfmanagedinstanceprice = (selfmanagedPrice * 730 * cockroachdbNodes) + auroraStorageCost;
     } else {
       document.getElementById("cockroachdb-ops").disabled = true;
       document.getElementById("cockroachdb-storage").disabled = true;
       document.getElementById("cockroachdb-nodes").disabled = true;
       document.getElementById("cockroachdb-instance-type").disabled = true;
       document.getElementById("ec2-instance-type").disabled = true;
-      document.getElementById("cockroachdb-license").disabled = true;
-      const ec2InstanceType = document.getElementById("ec2-instance-type");
-      if (!ec2InstanceType) throw new Error("Element 'ec2-instance-type' not found.");
-      // For automatic mode, use the EC2 Self-Managed Instance Type for self-managed pricing.
+      // In automatic mode, use the EC2 Self-Managed Instance Type for self-managed pricing.
       selfmanagedPrice = parseFloat(ec2InstanceType.options[ec2InstanceType.selectedIndex].getAttribute("ec2-cost")) || auroraCost;
+      // Also, adjust CockroachDB instance selection based on Aurora vCPU
       let selectedCockroachdbOption;
       const cockroachdbOptions = cockroachdbInstanceType.options;
       for (let i = 0; i < cockroachdbOptions.length; i++) {
@@ -536,18 +551,9 @@ function updateCost() {
       if (selectedCockroachdbOption) {
         document.getElementById("cockroachdb-instance-type").value = selectedCockroachdbOption.value;
       }
-      const manualCockroachdbStorage = auroraStorage * 3;
-      const manualCockroachdbStorageCost = manualCockroachdbStorage * 0.00045792 * 730;
-      const clustertype = 3;
-      cockroachdbCost = (cockroachdbPrice * 730 * clustertype) + manualCockroachdbStorageCost + cockroachdbIOCost;
-      selfmanagedinstanceprice = (selfmanagedPrice * 730 * clustertype) + auroraStorageCost;
     }
-
-    const nodeCpus = parseInt(cockroachOption.getAttribute("crdb-cloud-cpu")) || 0;
-    const totalCpus = nodeCpus * cockroachdbNodes;
-    const licenseCost = totalCpus * licenseCostPerCpu;
-
-    // Update breakdown displays
+    
+    // --- Update Breakdown Displays ---
     try {
       document.getElementById("aurora-breakdown").innerHTML = `
           <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins', sans-serif;">
@@ -750,6 +756,8 @@ function updateCost() {
     document.getElementById("cockroachdb-ops").addEventListener("input", updateCost);
     document.getElementById("cockroachdb-nodes").addEventListener("input", updateCost);
     document.getElementById("cockroachdb-license").addEventListener("input", updateCost);
+    document.getElementById("ec2-instance-type").addEventListener("change", updateCost);
+
 
   </script>
 </body>
