@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Database Cost Comparator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Balsamiq+Sans&family=Barlow+Condensed:wght@100&family=Chivo+Mono&family=Luckiest+Guy&family=Oswald:wght@200&family=Permanent+Marker&family=Poppins:wght@400;600&family=Sevillana&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins';
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      box-sizing: border-box;
+    }
+    h1, h2 {
+      color: #333;
+      text-align: center;
+      margin: 0;
+      padding: 1px 0;
+    }
+    table {
+      width: 100%;
+      max-width: 1200px;
+      margin-top: 20px;
+      margin-left: auto;
+      margin-right: auto;
+      box-sizing: border-box;
+      border-collapse: collapse;
+    }
+    .cell {
+      padding: 2px;
+      vertical-align: middle;
+      border: 1px solid #ccc;
+    }
+    .cell-top-align {
+      vertical-align: top;
+    }
+    .bar-group {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+    }
+    .bar-container {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: space-between;
+      width: 100%;
+      margin-top: 20px;
+    }
+    .bar-label {
+      width: 100%;
+      text-align: center;
+      color: #555;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .bar-value {
+      font-weight: bold;
+      color: #333;
+      font-size: 15px;
+    }
+    .bar {
+      width: 30px;
+      height: 400px;
+      background-color: #ddd;
+      margin-bottom: 5px;
+      transform: rotate(180deg);
+    }
+    .filled-bar {
+      height: 0;
+      background-color: #3498db;
+      transition: height 0.3s;
+      transform: rotate(180deg);
+    }
+    input[type="range"],
+    input[type="text"] {
+      width: 90%;
+      margin: 5px 0;
+    }
+    select {
+      width: 90%;
+      padding: 5px;
+      margin: 5px 0;
+    }
+    .cellmainoption {
+      padding: 10px;
+      vertical-align: middle;
+      border: 1px solid #ccc;
+      text-align: right;
+    }
+    .selectmainoption {
+      padding: 2px;
+      margin: 2px;
+      width: auto;
+    }
+    .cell > select {
+      display: inline-block;
+      margin-right: 20px;
+    }
+    .cell label {
+      margin-right: 10px;
+    }
+    .cell > select:last-child {
+      margin-right: 0;
+    }
+    .cost-breakdown {
+      flex-grow: 1;
+      padding-left: 10px;
+      text-align: left;
+      white-space: pre-wrap;
+      vertical-align: top;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <table>
+    <tr>
+      <td colspan="2" class="cell">
+        <h2>Database Cost Comparator Aurora vs CockroachDB</h2>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" class="cellmainoption">
+        <label for="region-select">Region:</label>
+        <select id="region-select" class="selectmainoption">
+          <!-- The region text here should match the CSV Region field -->
+          <option value="US East (N. Virginia)">US East (N. Virginia)</option>
+          <option value="US West (N. California)">US West (N. California)</option>
+          <option value="EU (Ireland)">EU (Ireland)</option>
+          <option value="Asia Pacific (Singapore)">Asia Pacific (Singapore)</option>
+        </select>
+        <label for="comparison-select">Comparison:</label>
+        <select id="comparison-select" class="selectmainoption">
+          <option value="automatic">Automatic</option>
+          <option value="manual">Manual</option>
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <!-- Aurora configuration -->
+      <td class="cell cell-top-align">
+        <h3>Aurora</h3>
+        <label for="aurora-instance-count">Number of Instances:</label>
+        <select id="aurora-instance-count">
+          <option value="1" selected>1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+        <br>
+        <label for="aurora-instance-type">Instance Type:</label>
+        <!-- Aurora pricing will be loaded from aurora_pricing.csv -->
+        <select id="aurora-instance-type"></select>
+        <br>
+        <label for="aurora-storage">Storage Size (GB):</label>
+        <input type="text" id="aurora-storage" value="1">
+        <br>
+        <label for="aurora-ops">Average Operations per Second:</label>
+        <input type="text" id="aurora-ops" value="1">
+        <span id="computed-io"> (Computed I/O: 0.00 million)</span>
+      </td>
+      <!-- CockroachDB configuration -->
+      <td class="cell cell-top-align">
+        <h3>CockroachDB</h3>
+        <label for="cockroachdb-nodes">Number of Nodes:</label>
+        <input type="range" id="cockroachdb-nodes" min="3" max="60" step="3" value="3">
+        <span id="node-count">1</span>
+        <br>
+        <label for="cockroachdb-instance-type">Cockroach Cloud Instance Type:</label>
+        <!-- CockroachDB pricing will be loaded from cockroachCloud_pricing.csv -->
+        <select id="cockroachdb-instance-type"></select>
+        <br>
+        <label for="ec2-instance-type">EC2 Self-Managed Instance Type:</label>
+        <!-- ec2 pricing will be loaded ec2_pricing.csv -->
+        <select id="ec2-instance-type"></select>
+        <label for="cockroachdb-storage">Storage Size (GB):</label>
+        <input type="text" id="cockroachdb-storage" value="1">
+        <br>
+        <label for="cockroachdb-ops">Average Operations per Second:</label>
+        <input type="text" id="cockroachdb-ops" value="1">
+        <span id="cockroach-computed-io"> (Computed I/O: 0.00 million)</span>
+        <br>
+        <label for="cockroachdb-license">License Cost/cpu:</label>
+        <input type="text" id="cockroachdb-license" value="0">
+      </td>
+    </tr>
+    <tr>
+      <!-- Aurora bars -->
+      <td class="cell cell-top-align">
+        <div class="bar-group">
+          <div class="bar-container">
+            <div class="bar">
+              <div id="aurora-bar" class="filled-bar"></div>
+            </div>
+            <div class="cost-breakdown">
+              <span id="aurora-cost" class="bar-value">$0.00</span>
+              <span id="aurora-breakdown"></span>
+            </div>
+          </div>
+          <div class="bar-container">
+            <div class="bar">
+              <div id="aurora-optimized-bar" class="filled-bar"></div>
+            </div>
+            <div class="cost-breakdown">
+              <span id="aurora-optimized-cost" class="bar-value">$0.00</span>
+              <span id="aurora-optimized-breakdown"></span>
+            </div>
+          </div>
+        </div>
+      </td>
+      <!-- CockroachDB & Self Managed bars -->
+      <td class="cell cell-top-align">
+        <div class="bar-group">
+          <div class="bar-container">
+            <div class="bar">
+              <div id="cockroachdb-bar" class="filled-bar"></div>
+            </div>
+            <div class="cost-breakdown">
+              <span id="cockroachdb-cost" class="bar-value">$0.00</span>
+              <span id="cockroachdb-breakdown"></span>
+            </div>
+          </div>
+          <div class="bar-container">
+            <div class="bar">
+              <div id="self-managed-bar" class="filled-bar"></div>
+            </div>
+            <div class="cost-breakdown">
+              <span id="self-managed-cost" class="bar-value">$0.00</span>
+              <span id="self-managed-breakdown"></span>
+            </div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <script>
+    // Load CockroachDB pricing data from cockroachCloud_pricing.csv and populate the CockroachDB instance type dropdown.
+    function loadCockroachPricingData() {
+      fetch("http://localhost:8000/cockroachCloud_pricing.csv")
+        .then(response => response.text())
+        .then(data => {
+          const lines = data.split("\n").filter(line => line.trim() !== "");
+          const header = lines.shift().split(",");
+          let optionsHtml = "";
+          let count = 0;
+          lines.forEach(line => {
+            const cols = line.split(",");
+            if (cols.length >= 4) {
+              const instanceName = cols[0].trim();
+              const vcpu = cols[1].trim();
+              const memory = cols[2].trim();
+              const cost = parseFloat(cols[3].trim());
+              const optionText = `${instanceName} (${vcpu} vCPUs, ${memory} GiB)`;
+              optionsHtml += `<option value="${instanceName}" crdb-cloud-price="${cost}" crdb-cloud-memory="${memory}" crdb-cloud-cpu="${vcpu}">${optionText}</option>`;
+              count++;
+            }
+          });
+          console.log(`Loaded ${count} cockroachdb pricing items.`);
+          document.getElementById("cockroachdb-instance-type").innerHTML = optionsHtml;
+          updateCost();
+        })
+        .catch(error => {
+          console.error("Error loading CockroachDB pricing data:", error);
+        });
+    } 
+
+function loadAuroraPricingData() {
+  const selectedRegion = document.getElementById("region-select").value;
+  fetch("http://localhost:8000/aurora_pricing.csv")
+    .then(response => response.text())
+    .then(data => {
+      const lines = data.split("\n").filter(line => line.trim() !== "");
+      const header = lines.shift().split(",");
+      let instances = [];
+      lines.forEach(line => {
+        const cols = line.split(",");
+        if (cols.length >= 8) {
+          // CSV columns: SKU, Instance Name, vCPU, Memory (GiB), Region, Cost per Hour (USD), Database Engine, Storage
+          const instanceName = cols[1].trim();
+          const vcpu = parseInt(cols[2].trim());
+          const memory = cols[3].trim();
+          const region = cols[4].trim();
+          const cost = parseFloat(cols[5].trim());
+          const databaseEngine = cols[6].trim();
+          const storage = cols[7].trim();
+          // Only load rows with all required fields and with vCPU >= 8.
+          if (instanceName && !isNaN(vcpu) && vcpu >= 8 && memory && region && !isNaN(cost) && cost > 0 && storage) {
+            // Filter for Aurora PostgreSQL, region match, and storage must be "EBS Only"
+            if (region === selectedRegion && databaseEngine === "Aurora PostgreSQL" && storage === "EBS Only") {
+              instances.push({ instanceName, vcpu, memory, region, cost });
+            }
+          }
+        }
+      });
+      // Remove duplicates based on instanceName.
+      const uniqueInstances = {};
+      instances.forEach(item => {
+        if (!uniqueInstances[item.instanceName]) {
+          uniqueInstances[item.instanceName] = item;
+        }
+      });
+      instances = Object.values(uniqueInstances);
+      // Sort by the prefix (left of the second period) then by vCPU (lowest to highest)
+      instances.sort((a, b) => {
+        const prefixA = a.instanceName.split('.').slice(0, 2).join('.');
+        const prefixB = b.instanceName.split('.').slice(0, 2).join('.');
+        const cmp = prefixA.localeCompare(prefixB);
+        return cmp !== 0 ? cmp : a.vcpu - b.vcpu;
+      });
+      let optionsHtml = "";
+      instances.forEach(item => {
+        const optionText = `${item.instanceName} (${item.vcpu} vCPUs, ${item.memory} GiB)`;
+        optionsHtml += `<option value="${item.instanceName}" provisioned-cost="${item.cost}" io-optimized-cost="${(item.cost * 1.3).toFixed(3)}" aurora-memory="${item.memory}" aurora-cpu="${item.vcpu}">${optionText}</option>`;
+      });
+      document.getElementById("aurora-instance-type").innerHTML = optionsHtml;
+      console.log(`Loaded ${instances.length} Aurora pricing items.`);
+      updateCost();
+    })
+    .catch(error => {
+      console.error("Error loading Aurora pricing data:", error);
+    });
+}
+
+
+function loadEc2InstancePricingData() {
+  const selectedRegion = document.getElementById("region-select").value;
+  fetch("http://localhost:8000/ec2_pricing.csv")
+    .then(response => response.text())
+    .then(data => {
+      const lines = data.split("\n").filter(line => line.trim() !== "");
+      const header = lines.shift().split(",");
+      let instances = [];
+      lines.forEach(line => {
+        const cols = line.split(",");
+        if (cols.length >= 6) {
+          // CSV: SKU,Instance Name,vCPU,Memory (GiB),Region,Cost per Hour (USD)
+          const instanceName = cols[1].trim();
+          const vcpu = parseInt(cols[2].trim());
+          const memory = cols[3].trim();
+          const region = cols[4].trim();
+          const cost = parseFloat(cols[5].trim());
+          // Allowed prefixes: only load instance names starting with these prefixes.
+          const allowedPrefixes = ["M5.","M6I.","M6G.","R6G.","M7I.","M7G.","R7G."];
+          const upperName = instanceName.toUpperCase();
+          const allowed = allowedPrefixes.some(prefix => upperName.startsWith(prefix));
+          if (region === selectedRegion && cost > 0 && vcpu <= 32 && vcpu >= 4 && allowed) {
+            instances.push({ instanceName, vcpu, memory, region, cost });
+          }
+        }
+      });
+      // Remove duplicates based on instanceName.
+      const uniqueInstances = {};
+      instances.forEach(item => {
+         if (!uniqueInstances[item.instanceName]) {
+            uniqueInstances[item.instanceName] = item;
+         }
+      });
+      instances = Object.values(uniqueInstances);
+      // Sort by prefix (from allowedPrefixes) then by vCPU (lowest to highest)
+      const allowedPrefixesUpper = ["M5.","M6I.","M6G.","R6G.","R6I","M7I.","M7G.","R7G."];
+      function extractPrefix(instanceName) {
+        for (let prefix of allowedPrefixesUpper) {
+          if (instanceName.toUpperCase().startsWith(prefix)) {
+            return prefix;
+          }
+        }
+        return "";
+      }
+      instances.sort((a, b) => {
+         const prefixA = extractPrefix(a.instanceName);
+         const prefixB = extractPrefix(b.instanceName);
+         const prefixCompare = prefixA.localeCompare(prefixB);
+         if (prefixCompare !== 0) return prefixCompare;
+         return a.vcpu - b.vcpu;
+      });
+      let optionsHtml = "";
+      instances.forEach(item => {
+        const optionText = `${item.instanceName} (${item.vcpu} vCPUs, ${item.memory} GiB)`;
+        optionsHtml += `<option value="${item.instanceName}" ec2-cost="${item.cost}" ec2-memory="${item.memory}" ec2-cpu="${item.vcpu}">${optionText}</option>`;
+      });
+      document.getElementById("ec2-instance-type").innerHTML = optionsHtml;
+      const ec2Select = document.getElementById("ec2-instance-type");
+      if (ec2Select.querySelector('option[value="m5.large"]')) {
+        ec2Select.value = "m5.large";
+      } else if (ec2Select.options.length > 0) {
+        ec2Select.selectedIndex = 0;
+      }
+      console.log(`Loaded ${instances.length} EC2 instance pricing items.`);
+      updateCost();
+    })
+    .catch(error => {
+      console.error("Error loading EC2 instance pricing data:", error);
+    });
+}
+
+
+    // Call both loaders when the region changes
+    document.getElementById("region-select").addEventListener("change", function() {
+      loadEc2InstancePricingData();
+      loadAuroraPricingData();
+    });
+
+    // Initial load of pricing data
+    loadEc2InstancePricingData();
+    loadCockroachPricingData();
+    loadAuroraPricingData();
+    
+function updateCost() {
+  try {
+    // --- Aurora Calculations (unchanged) ---
+    const auroraInstanceType = document.getElementById("aurora-instance-type");
+    if (!auroraInstanceType) throw new Error("Element 'aurora-instance-type' not found.");
+    const auroraStorage = parseFloat(document.getElementById("aurora-storage").value) || 0;
+    const auroraOps = parseFloat(document.getElementById("aurora-ops").value) || 0;
+    const computedIO = (auroraOps * 730 * 3600) / 1000000;
+    const computedIOElem = document.getElementById("computed-io");
+    if (computedIOElem) {
+      computedIOElem.textContent = ` (Computed I/O: ${computedIO.toFixed(2)} million)`;
+    }
+    const selectedAuroraOption = auroraInstanceType.options[auroraInstanceType.selectedIndex];
+    if (!selectedAuroraOption) throw new Error("No Aurora option selected.");
+    const auroraCost = parseFloat(selectedAuroraOption.getAttribute("provisioned-cost")) || 0;
+    const auroraOptimizedCost = parseFloat(selectedAuroraOption.getAttribute("io-optimized-cost")) || (auroraCost * 1.3);
+    const auroraMemory = selectedAuroraOption.getAttribute("aurora-memory") || "N/A";
+    const auroraVcpu = selectedAuroraOption.getAttribute("aurora-cpu") || "N/A";
+    const auroraVcpuElem = document.getElementById("aurora-vcpu");
+    if (auroraVcpuElem) {
+      auroraVcpuElem.textContent = `VCPU: ${auroraVcpu}`;
+    }
+    const auroraMemoryElem = document.getElementById("aurora-memory");
+    if (auroraMemoryElem) {
+      auroraMemoryElem.textContent = `Memory: ${auroraMemory} GiB`;
+    }
+    const auroraStorageCost = auroraStorage * 0.10;
+    const auroraIOCost = computedIO * 0.20;
+    const aurorastoragecostioo = auroraStorage * 0.225;
+    const instanceCount = parseInt(document.getElementById("aurora-instance-count").value) || 1;
+    const auroraCostStandard = (auroraCost * 730 * instanceCount) + auroraStorageCost + auroraIOCost;
+    const auroraCostOptimized = ((auroraCost * 1.3) * 730 * instanceCount) + aurorastoragecostioo;
+
+    // --- CockroachDB Calculations ---
+    const cockroachdbInstanceType = document.getElementById("cockroachdb-instance-type");
+    if (!cockroachdbInstanceType) throw new Error("Element 'cockroachdb-instance-type' not found.");
+    const cockroachdbStorage = parseFloat(document.getElementById("cockroachdb-storage").value) || 0;
+    let cockroachOps = parseFloat(document.getElementById("cockroachdb-ops").value) || 0;
+    let computedCockroachIO = (cockroachOps * 730 * 3600) / 1000000;
+    // In automatic mode, mirror Aurora's ops
+    const mode = document.getElementById("comparison-select").value;
+    if (mode !== "manual") {
+      cockroachOps = auroraOps;
+      document.getElementById("cockroachdb-ops").value = auroraOps;
+      computedCockroachIO = (cockroachOps * 730 * 3600) / 1000000;
+    }
+    const cockroachComputedIOElem = document.getElementById("cockroach-computed-io");
+    if (cockroachComputedIOElem) {
+      cockroachComputedIOElem.textContent = ` (Computed I/O: ${computedCockroachIO.toFixed(2)} million)`;
+    }
+    const cockroachOption = cockroachdbInstanceType.options[cockroachdbInstanceType.selectedIndex];
+    if (!cockroachOption) throw new Error("No CockroachDB option selected.");
+    const cockroachdbPrice = parseFloat(cockroachOption.getAttribute("crdb-cloud-price")) || 0;
+    const cockroachdbStorageCost = cockroachdbStorage * 0.00045792 * 730;
+    const cockroachdbIOCost = computedCockroachIO * 0.00001956947162 * 730;
+    const cockroachdbNodes = parseInt(document.getElementById("cockroachdb-nodes").value) || 3;
+    const nodeCountElem = document.getElementById("node-count");
+    if (nodeCountElem) {
+      nodeCountElem.textContent = cockroachdbNodes;
+    }
+    // CockroachDB cost always uses the Cockroach Cloud pricing.
+    const cockroachdbTotalCost = (cockroachdbPrice * 730 * cockroachdbNodes) + cockroachdbStorageCost + cockroachdbIOCost;
+
+    // --- Self Managed Calculations ---
+    // Use EC2 Self-Managed Instance Type for self-managed pricing.
+    const ec2InstanceType = document.getElementById("ec2-instance-type");
+    if (!ec2InstanceType) throw new Error("Element 'ec2-instance-type' not found.");
+    const ec2Option = ec2InstanceType.options[ec2InstanceType.selectedIndex];
+    const ec2Cost = parseFloat(ec2Option.getAttribute("ec2-cost")) || 0;
+    // Here, assume self-managed instance cost is calculated based on EC2 pricing and the same node count
+    const selfManagedTotalCost = (ec2Cost * 730 * cockroachdbNodes) + auroraStorageCost;
+
+    // Calculate license cost for CockroachDB
+    const licenseCostPerCpu = parseFloat(document.getElementById("cockroachdb-license").value) || 0;
+    if (mode === "manual") {
+      document.getElementById("cockroachdb-storage").disabled = false;
+      document.getElementById("cockroachdb-ops").disabled = false;
+      document.getElementById("cockroachdb-nodes").disabled = false;
+      document.getElementById("cockroachdb-instance-type").disabled = false;
+      document.getElementById("ec2-instance-type").disabled = false;
+      document.getElementById("cockroachdb-license").disabled = false;
+      // For manual mode, get self-managed cost from the Cockroach option’s ec2-cost attribute.
+      selfmanagedPrice = parseFloat(cockroachOption.getAttribute("ec2-cost"));
+      cockroachdbCost = (cockroachdbPrice * 730 * cockroachdbNodes) + cockroachdbStorageCost + cockroachdbIOCost;
+      selfmanagedinstanceprice = (selfmanagedPrice * 730 * cockroachdbNodes) + auroraStorageCost;
+    } else {
+      document.getElementById("cockroachdb-ops").disabled = true;
+      document.getElementById("cockroachdb-storage").disabled = true;
+      document.getElementById("cockroachdb-nodes").disabled = true;
+      document.getElementById("cockroachdb-instance-type").disabled = true;
+      document.getElementById("ec2-instance-type").disabled = true;
+      document.getElementById("cockroachdb-license").disabled = true;
+      const ec2InstanceType = document.getElementById("ec2-instance-type");
+      if (!ec2InstanceType) throw new Error("Element 'ec2-instance-type' not found.");
+      // For automatic mode, use the EC2 Self-Managed Instance Type for self-managed pricing.
+      selfmanagedPrice = parseFloat(ec2InstanceType.options[ec2InstanceType.selectedIndex].getAttribute("ec2-cost")) || auroraCost;
+      let selectedCockroachdbOption;
+      const cockroachdbOptions = cockroachdbInstanceType.options;
+      for (let i = 0; i < cockroachdbOptions.length; i++) {
+        const optionCpu = parseInt(cockroachdbOptions[i].getAttribute("crdb-cloud-cpu"));
+        if (optionCpu === parseInt(auroraVcpu)) {
+          selectedCockroachdbOption = cockroachdbOptions[i];
+          document.getElementById("cockroachdb-nodes").value = 3;
+          document.getElementById("node-count").textContent = 3;
+          break;
+        }
+      }
+      if (!selectedCockroachdbOption) {
+        for (let i = 0; i < cockroachdbOptions.length; i++) {
+          const optionCpu = parseInt(cockroachdbOptions[i].getAttribute("crdb-cloud-cpu"));
+          if (optionCpu === 8) {
+            selectedCockroachdbOption = cockroachdbOptions[i];
+            break;
+          }
+        }
+        const cockroachdbNodesCalculated = Math.ceil(parseInt(auroraVcpu) / 8);
+        document.getElementById("cockroachdb-nodes").value = cockroachdbNodesCalculated;
+        document.getElementById("node-count").textContent = cockroachdbNodesCalculated;
+      }
+      if (selectedCockroachdbOption) {
+        document.getElementById("cockroachdb-instance-type").value = selectedCockroachdbOption.value;
+      }
+      const manualCockroachdbStorage = auroraStorage * 3;
+      const manualCockroachdbStorageCost = manualCockroachdbStorage * 0.00045792 * 730;
+      const clustertype = 3;
+      cockroachdbCost = (cockroachdbPrice * 730 * clustertype) + manualCockroachdbStorageCost + cockroachdbIOCost;
+      selfmanagedinstanceprice = (selfmanagedPrice * 730 * clustertype) + auroraStorageCost;
+    }
+
+    const nodeCpus = parseInt(cockroachOption.getAttribute("crdb-cloud-cpu")) || 0;
+    const totalCpus = nodeCpus * cockroachdbNodes;
+    const licenseCost = totalCpus * licenseCostPerCpu;
+
+    // Update breakdown displays
+    try {
+      document.getElementById("aurora-breakdown").innerHTML = `
+          <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins', sans-serif;">
+            <tr style="background-color: #f8f9fa;">
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Compute</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${(auroraCost * 730 * instanceCount).toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Storage</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${auroraStorageCost.toFixed(2)}</td>
+            </tr>
+            <tr style="background-color: #f8f9fa;">
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">I/O</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${auroraIOCost.toFixed(2)}</td>
+            </tr>
+          </table>
+          `;
+    } catch (e) {
+      console.error("Error updating Aurora breakdown:", e);
+    }
+    try {
+      document.getElementById("aurora-optimized-breakdown").innerHTML = `
+          <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins', sans-serif;">
+            <tr style="background-color: #f8f9fa;">
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Compute</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${((auroraCost * 1.3) * 730 * instanceCount).toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Storage</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${aurorastoragecostioo.toFixed(2)}</td>
+            </tr>
+            <tr style="background-color: #f8f9fa;">
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">I/O</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$0</td>
+            </tr>
+          </table>
+          `;
+    } catch (e) {
+      console.error("Error updating Aurora Optimized breakdown:", e);
+    }
+    try {
+      document.getElementById("cockroachdb-breakdown").innerHTML = `
+          <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins', sans-serif;">
+            <tr style="background-color: #f8f9fa;">
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Node Cost</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${(cockroachdbPrice * 730 * cockroachdbNodes).toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">Storage</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${cockroachdbStorageCost.toFixed(2)}</td>
+            </tr>
+            <tr style="background-color: #f8f9fa;">
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold; color: #495057;">I/O</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px; color: #343a40;">$${cockroachdbIOCost.toFixed(2)}</td>
+            </tr>
+          </table>
+          `;
+    } catch (e) {
+      console.error("Error updating CockroachDB breakdown:", e);
+    }
+    try {
+      document.getElementById("self-managed-breakdown").innerHTML = `
+          <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins', sans-serif;">
+            <tr style="background-color: #f8f9fa;">
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Instance</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px;">$${(ec2Cost * 730 * cockroachdbNodes).toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Storage</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px;">$${auroraStorageCost.toFixed(2)}</td>
+            </tr>
+            <tr style="background-color: #f8f9fa;">
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">I/O</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px;">$0</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Total Nodes</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px;">${cockroachdbNodes}</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">Total CPUs</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px;">${(cockroachdbNodes * nodeCpus)}</td>
+            </tr>
+            <tr style="background-color: #f8f9fa;">
+              <td style="border: 1px solid #dee2e6; padding: 10px; font-weight: bold;">License Cost</td>
+              <td style="border: 1px solid #dee2e6; padding: 10px;">$${licenseCost.toFixed(2)}</td>
+            </tr>
+          </table>
+          `;
+    } catch (e) {
+      console.error("Error updating Self Managed breakdown:", e);
+    }
+    
+    try {
+      document.getElementById("aurora-cost").innerHTML = `
+          <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins', sans-serif; text-align: center;">
+            <tr style="background-color: #f8f9fa;">
+              <td style="border: 1px solid #dee2e6; padding: 15px; font-weight: bold;">Aurora Provisioned</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #dee2e6; padding: 20px; font-size: 24px; color: #fff; background-color: #b3c6c1;">
+                $${auroraCostStandard.toFixed(2)}
+              </td>
+            </tr>
+          </table>
+          `;
+    } catch (e) {
+      console.error("Error updating Aurora Provisioned cost:", e);
+    }
+    try {
+      document.getElementById("aurora-optimized-cost").innerHTML = `
+          <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins', sans-serif; text-align: center;">
+            <tr style="background-color: #f8f9fa;">
+              <td style="border: 1px solid #dee2e6; padding: 15px; font-weight: bold;">IO Optimized</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #dee2e6; padding: 20px; font-size: 24px; color: #fff; background-color: #b3c6c1;">
+                $${auroraCostOptimized.toFixed(2)}
+              </td>
+            </tr>
+          </table>
+          `;
+    } catch (e) {
+      console.error("Error updating IO Optimized cost:", e);
+    }
+    try {
+      document.getElementById("cockroachdb-cost").innerHTML = `
+          <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins', sans-serif; text-align: center;">
+            <tr style="background-color: #f8f9fa;">
+              <td style="border: 1px solid #dee2e6; padding: 15px; font-weight: bold;">Cockroach DB</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #dee2e6; padding: 20px; font-size: 24px; color: #fff; background-color: #b3c6c1;">
+                $${cockroachdbTotalCost.toFixed(2)}
+              </td>
+            </tr>
+          </table>
+          `;
+    } catch (e) {
+      console.error("Error updating Cockroach DB cost:", e);
+    }
+    try {
+      document.getElementById("self-managed-cost").innerHTML = `
+          <table style="border-collapse: collapse; width: 100%; font-family: 'Poppins', sans-serif; text-align: center;">
+            <tr style="background-color: #f8f9fa;">
+              <td style="border: 1px solid #dee2e6; padding: 15px; font-weight: bold;">Self Managed</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #dee2e6; padding: 20px; font-size: 24px; color: #fff; background-color: #b3c6c1;">
+                $${(selfManagedTotalCost + licenseCost).toFixed(2)}
+              </td>
+            </tr>
+          </table>
+          `;
+    } catch (e) {
+      console.error("Error updating Self Managed cost:", e);
+    }
+    
+    const costsArray = [
+      { id: "aurora-bar", cost: auroraCostStandard },
+      { id: "cockroachdb-bar", cost: cockroachdbTotalCost },
+      { id: "aurora-optimized-bar", cost: auroraCostOptimized },
+      { id: "self-managed-bar", cost: (selfManagedTotalCost + licenseCost) }
+    ];
+    const maxCostValue = Math.max(...costsArray.map(item => item.cost));
+    const minCostValue = Math.min(...costsArray.map(item => item.cost));
+    function applyGradient(barElement, color) {
+      barElement.style.background = `linear-gradient(to top, ${color} 0%, ${color}80 100%)`;
+    }
+    costsArray.forEach(item => {
+      const barElement = document.getElementById(item.id);
+      if (!barElement) {
+        console.warn(`Element with id ${item.id} not found.`);
+        return;
+      }
+      const barValue = (isNaN(item.cost) || item.cost < 0) ? 0 : item.cost;
+      barElement.style.height = `${(barValue / maxCostValue) * 100}%`;
+      if (barValue === maxCostValue) {
+        applyGradient(barElement, "#e74c3c");
+      } else if (barValue === minCostValue) {
+        applyGradient(barElement, "#27ae60");
+      } else {
+        applyGradient(barElement, "#3498db");
+      }
+    });
+  } catch (error) {
+    console.error("Error in updateCost:", error);
+  }
+}
+
+
+    // Event listeners
+    document.getElementById("comparison-select").addEventListener("change", updateCost);
+    document.getElementById("aurora-instance-type").addEventListener("change", updateCost);
+    document.getElementById("aurora-storage").addEventListener("input", updateCost);
+    document.getElementById("aurora-ops").addEventListener("input", updateCost);
+    document.getElementById("aurora-instance-count").addEventListener("change", updateCost);
+    document.getElementById("cockroachdb-instance-type").addEventListener("change", updateCost);
+    document.getElementById("cockroachdb-storage").addEventListener("input", updateCost);
+    document.getElementById("cockroachdb-ops").addEventListener("input", updateCost);
+    document.getElementById("cockroachdb-nodes").addEventListener("input", updateCost);
+    document.getElementById("cockroachdb-license").addEventListener("input", updateCost);
+
+  </script>
+</body>
+</html>
+

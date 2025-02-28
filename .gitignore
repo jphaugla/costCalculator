@@ -5,6 +5,10 @@ __pycache__/
 
 # C extensions
 *.so
+# pricing files
+pricing/bkup
+pricing/*.csv
+pricing/*.json
 
 # Distribution / packaging
 .Python
