@@ -62,8 +62,11 @@ python fetch_all_aws.py
 * Browser security doesn't allow to load files from the browser so an http server must run in the directory where the pricing files are located
 ```bash
 # make sure to be in costCalculator/pricing
-# this will run in the background
+# this will run in the background on port 8000
 ./start_http.sh
+# if a different port is needed, pass the port number as the first parameter to the start_http.sh script
+./start_http.sh 8001
+# 
   ```
 ### Open a file using browser
 Choose desired file and open it in the browser using File->Open File method
@@ -72,3 +75,7 @@ Choose desired file and open it in the browser using File->Open File method
   * AuroraOpt.html - cost calculator with a self managed cost optimization option involving choosing to idle machines
 * Dynamic file
   * AuroraDynamic.html - cost calculator using downloaded aws cost information
+NOTE:  If port 8000 was not used (it is the default).  Change the open of the html file to be
+```bash
+file:///PathToGit/costCalculator/AuroraDynamic.html?port=8001
+```
