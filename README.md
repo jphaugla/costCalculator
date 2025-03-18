@@ -39,7 +39,7 @@ To use the dynamic version, the latest pricing information needs to be downloade
 ```bash
 cd costCalculator/pricing
 python3 -m venv venv
-source env/bin/activate
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 #### Fetch pricing information
