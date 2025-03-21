@@ -12,5 +12,5 @@ PORT=${1:-8000}
 echo "Serving directory $DIR on http://localhost:$PORT"
 
 # Run the Python server in the background and redirect logs
-nohup python3 CORS_server.py --port "$PORT" > http_ec2.log 2>&1 &
+nohup venv/bin/python CORS_server.py --port "$PORT" > http_ec2.log 2>&1 &
 
