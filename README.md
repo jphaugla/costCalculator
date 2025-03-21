@@ -68,14 +68,12 @@ python fetch_all_aws.py
 ./start_http.sh 8001
 # 
   ```
-### Open a file using browser
-Choose desired file and open it in the browser using File->Open File method
+### Open web page  using browser
+http://localhost:8000/AuroraDynamic.html
 * Static files
   * Aurora.html - standard cost calculator. 
   * AuroraOpt.html - cost calculator with a self managed cost optimization option involving choosing to idle machines
 * Dynamic file
   * AuroraDynamic.html - cost calculator using downloaded aws cost information
 NOTE:  If port 8000 was not used (it is the default).  Change the open of the html file to be
-```bash
-file:///PathToGit/costCalculator/AuroraDynamic.html?port=8001
-```
+http://localhost:8001/AuroraDynamic.html
