@@ -274,7 +274,7 @@
 
     // Load CockroachDB pricing data from cockroachCloud_pricing.csv and populate the CockroachDB instance type dropdown.
     function loadCockroachPricingData() {
-      fetch(`${BASE_URL}/cockroachCloud_pricing.csv?cacheBust=${new Date().getTime()}`)
+      fetch(`${BASE_URL}/pricing/cockroachCloud_pricing.csv?cacheBust=${new Date().getTime()}`)
         .then(response => response.text())
         .then(data => {
           const lines = data.split("\n").filter(line => line.trim() !== "");
@@ -307,7 +307,7 @@
 
     function loadAuroraPricingData() {
       const selectedRegion = document.getElementById("region-select").value;
-      fetch(`${BASE_URL}/aurora_pricing.csv?cacheBust=${new Date().getTime()}`)
+      fetch(`${BASE_URL}/pricing/aurora_pricing.csv?cacheBust=${new Date().getTime()}`)
         .then(response => response.text())
         .then(data => {
           const lines = data.split("\n").filter(line => line.trim() !== "");
@@ -364,7 +364,7 @@
 
     function loadEc2InstancePricingData() {
       const selectedRegion = document.getElementById("region-select").value;
-      fetch(`${BASE_URL}/ec2_pricing.csv?cacheBust=${new Date().getTime()}`)
+      fetch(`${BASE_URL}/pricing/ec2_pricing.csv?cacheBust=${new Date().getTime()}`)
         .then(response => response.text())
         .then(data => {
           const lines = data.split("\n").filter(line => line.trim() !== "");
